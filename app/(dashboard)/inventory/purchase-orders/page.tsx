@@ -13,9 +13,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Plus, generateId } from "lucide-react"
+import { Plus } from "lucide-react"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { generateOrderNumber } from "@/lib/utils/generators"
+import { generateId, generateOrderNumber } from "@/lib/utils/generators"
 
 const schema = z.object({ supplierId: z.string().min(1), warehouseId: z.string().min(1), notes: z.string().optional() })
 

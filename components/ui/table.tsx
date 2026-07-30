@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils/cn"
 
 interface TableProps {
-  children: React.ReactNode
+  children?: React.ReactNode
   className?: string
 }
 
@@ -49,7 +49,7 @@ export function TableHead({ children, className }: TableProps) {
   )
 }
 
-export function TableCell({ children, className }: TableProps) {
+export function TableCell({ children, className, colSpan }: TableProps & { colSpan?: number }) {
   return (
     <td className={cn("px-6 py-4 text-sm text-gray-900 whitespace-nowrap", className)}>
       {children}

@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import type {
   Business, Branch, Warehouse, Category, Brand, Supplier,
-  Product, Customer, CustomerGroup, Employee, Notification,
+  Product, Customer, CustomerGroup, Employee, Notification, User,
   Sale, PurchaseOrder, StockTransfer, Transaction
 } from "@/lib/types"
 
@@ -15,6 +15,7 @@ interface DataState {
   products: Product[]
   customers: Customer[]
   customerGroups: CustomerGroup[]
+  users: User[]
   employees: Employee[]
   notifications: Notification[]
   sales: Sale[]
@@ -30,6 +31,7 @@ interface DataState {
   setProducts: (products: Product[]) => void
   setCustomers: (customers: Customer[]) => void
   setCustomerGroups: (groups: CustomerGroup[]) => void
+  setUsers: (users: User[]) => void
   setEmployees: (employees: Employee[]) => void
   setNotifications: (notifications: Notification[]) => void
   setSales: (sales: Sale[]) => void
@@ -47,6 +49,7 @@ interface DataState {
   addPurchaseOrder: (order: PurchaseOrder) => void
   addStockTransfer: (transfer: StockTransfer) => void
   addCustomer: (customer: Customer) => void
+  addCustomerGroup: (group: CustomerGroup) => void
   updateCustomer: (id: string, updates: Partial<Customer>) => void
   addEmployee: (employee: Employee) => void
   addBranch: (branch: Branch) => void
@@ -66,6 +69,7 @@ export const useDataStore = create<DataState>()((set) => ({
   products: [],
   customers: [],
   customerGroups: [],
+  users: [],
   employees: [],
   notifications: [],
   sales: [],
@@ -82,6 +86,7 @@ export const useDataStore = create<DataState>()((set) => ({
   setProducts: (products) => set({ products }),
   setCustomers: (customers) => set({ customers }),
   setCustomerGroups: (groups) => set({ customerGroups: groups }),
+  setUsers: (users) => set({ users }),
   setEmployees: (employees) => set({ employees }),
   setNotifications: (notifications) => set({ notifications }),
   setSales: (sales) => set({ sales }),
@@ -119,6 +124,7 @@ export const useDataStore = create<DataState>()((set) => ({
   addStockTransfer: (transfer) =>
     set((s) => ({ stockTransfers: [...s.stockTransfers, transfer] })),
   addCustomer: (customer) => set((s) => ({ customers: [...s.customers, customer] })),
+  addCustomerGroup: (group) => set((s) => ({ customerGroups: [...s.customerGroups, group] })),
   updateCustomer: (id, updates) =>
     set((s) => ({
       customers: s.customers.map((c) => (c.id === id ? { ...c, ...updates } : c)),

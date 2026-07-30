@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useDataStore } from "@/lib/stores/data-store"
-import { mockBusiness, mockBranches, mockWarehouses, mockCategories, mockBrands, mockSuppliers, mockProducts, mockCustomers, mockCustomerGroups, mockEmployees } from "@/lib/constants/mock-data"
+import { mockBusiness, mockBranches, mockWarehouses, mockCategories, mockBrands, mockSuppliers, mockProducts, mockCustomers, mockCustomerGroups, mockEmployees, mockUsers } from "@/lib/constants/mock-data"
 
 export function useInitializeData() {
   const setBusiness = useDataStore((s) => s.setBusiness)
@@ -14,9 +14,11 @@ export function useInitializeData() {
   const setProducts = useDataStore((s) => s.setProducts)
   const setCustomers = useDataStore((s) => s.setCustomers)
   const setCustomerGroups = useDataStore((s) => s.setCustomerGroups)
+  const setUsers = useDataStore((s) => s.setUsers)
   const setEmployees = useDataStore((s) => s.setEmployees)
 
   useEffect(() => {
+    setUsers(mockUsers)
     setBusiness(mockBusiness)
     setBranches(mockBranches)
     setWarehouses(mockWarehouses)

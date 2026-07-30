@@ -12,7 +12,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Plus, generateId } from "lucide-react"
+import { Plus } from "lucide-react"
+import { generateId } from "@/lib/utils/generators"
 
 const schema = z.object({ name: z.string().min(1), contactPerson: z.string().min(1), email: z.string().email(), phone: z.string().min(1), address: z.string().optional() })
 
