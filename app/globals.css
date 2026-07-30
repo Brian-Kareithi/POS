@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
-  --color-background: #ffffff;
-  --color-foreground: #171717;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --color-blue-50: #eff6ff;
@@ -38,12 +38,72 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  .dark body,
-  body.dark {
-    --color-background: #0a0a0a;
-    --color-foreground: #ededed;
-  }
+.dark body,
+body.dark,
+.dark {
+  --color-gray-50: #1a1a2e;
+  --color-gray-100: #16213e;
+  --color-gray-200: #1e2a4a;
+  --color-gray-300: #2a3a5c;
+  --color-gray-400: #6b7280;
+  --color-gray-500: #9ca3af;
+  --color-gray-600: #cbd5e1;
+  --color-gray-700: #e2e8f0;
+  --color-gray-900: #f1f5f9;
+  --color-blue-50: #1e3a5f;
+  --color-blue-100: #1e40af;
+  --color-blue-200: #3b82f6;
+  --color-green-50: #14532d;
+  --color-green-100: #166534;
+  --color-red-50: #450a0a;
+  --color-red-100: #7f1d1d;
+  --color-orange-50: #431407;
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+.dark .bg-white {
+  background-color: #1a1a2e;
+}
+
+.dark .border-gray-200 {
+  border-color: #1e2a4a;
+}
+
+.dark .border-gray-100 {
+  border-color: #1e2a4a;
+}
+
+.dark .text-gray-900 {
+  color: #f1f5f9;
+}
+
+.dark .text-gray-700 {
+  color: #e2e8f0;
+}
+
+.dark .text-gray-600 {
+  color: #cbd5e1;
+}
+
+.dark .text-gray-500 {
+  color: #94a3b8;
+}
+
+.dark .text-gray-400 {
+  color: #64748b;
+}
+
+.dark .bg-gray-50 {
+  background-color: #0f172a;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: #1e293b;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: #1e293b;
 }
 
 @media print {
