@@ -13,15 +13,7 @@ export interface User {
   updatedAt: string
 }
 
-export type Role =
-  | "super_admin"
-  | "business_owner"
-  | "branch_manager"
-  | "cashier"
-  | "inventory_manager"
-  | "accountant"
-  | "customer"
-  | "self_checkout"
+export type Role = "owner" | "sales_person"
 
 export interface Business {
   id: string
@@ -349,8 +341,6 @@ export interface Report {
 
 export interface DashboardStats {
   salesToday: number
-  salesWeek: number
-  salesMonth: number
   revenue: number
   expenses: number
   profit: number
@@ -363,4 +353,23 @@ export interface DashboardStats {
   branchComparison: { branch: Branch; sales: number; revenue: number }[]
   revenueData: { date: string; revenue: number; expenses: number; profit: number }[]
   taxSummary: { rate: number; collected: number }[]
+}
+
+export interface CheckoutSession {
+  id: string
+  saleId: string
+  token: string
+  items: CheckoutSessionItem[]
+  total: number
+  status: "pending" | "completed" | "expired"
+  expiresAt: string
+  createdAt: string
+}
+
+export interface CheckoutSessionItem {
+  productId: string
+  name: string
+  quantity: number
+  unitPrice: number
+  total: number
 }

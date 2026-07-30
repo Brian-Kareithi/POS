@@ -1,14 +1,8 @@
 export const APP_NAME = "This POS System"
 
 export const ROLES = [
-  { value: "super_admin", label: "Super Admin" },
-  { value: "business_owner", label: "Business Owner" },
-  { value: "branch_manager", label: "Branch Manager" },
-  { value: "cashier", label: "Cashier" },
-  { value: "inventory_manager", label: "Inventory Manager" },
-  { value: "accountant", label: "Accountant" },
-  { value: "customer", label: "Customer" },
-  { value: "self_checkout", label: "Self Checkout User" },
+  { value: "owner", label: "Owner / Director" },
+  { value: "sales_person", label: "Sales Person" },
 ] as const
 
 export const PAYMENT_METHODS = [
@@ -46,11 +40,10 @@ export const TRANSACTION_TYPES = [
 ] as const
 
 export const CURRENCIES = [
+  { value: "KES", label: "Kenyan Shilling (KSh)" },
   { value: "USD", label: "US Dollar ($)" },
   { value: "EUR", label: "Euro (€)" },
   { value: "GBP", label: "British Pound (£)" },
-  { value: "KES", label: "Kenyan Shilling (KSh)" },
-  { value: "NGN", label: "Nigerian Naira (₦)" },
 ] as const
 
 export const TAX_RATES = [
@@ -74,13 +67,13 @@ export const UNITS = [
 ] as const
 
 export const SIDEBAR_ITEMS = [
-  { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
-  { href: "/products", label: "Products", icon: "Package" },
-  { href: "/inventory", label: "Inventory", icon: "Warehouse" },
-  { href: "/sales", label: "Sales", icon: "ShoppingCart" },
-  { href: "/customers", label: "Customers", icon: "Users" },
-  { href: "/employees", label: "Employees", icon: "UserCog" },
-  { href: "/accounting", label: "Accounting", icon: "BookOpen" },
-  { href: "/reports", label: "Reports", icon: "BarChart3" },
-  { href: "/settings", label: "Settings", icon: "Settings" },
+  { href: "/", label: "Dashboard", icon: "LayoutDashboard", roles: ["owner"] },
+  { href: "/products", label: "Products", icon: "Package", roles: ["owner", "sales_person"] },
+  { href: "/inventory", label: "Inventory", icon: "Warehouse", roles: ["owner"] },
+  { href: "/sales", label: "Sales", icon: "ShoppingCart", roles: ["owner", "sales_person"] },
+  { href: "/customers", label: "Customers", icon: "Users", roles: ["owner"] },
+  { href: "/employees", label: "Employees", icon: "UserCog", roles: ["owner"] },
+  { href: "/accounting", label: "Accounting", icon: "BookOpen", roles: ["owner"] },
+  { href: "/reports", label: "Reports", icon: "BarChart3", roles: ["owner"] },
+  { href: "/settings", label: "Settings", icon: "Settings", roles: ["owner"] },
 ] as const

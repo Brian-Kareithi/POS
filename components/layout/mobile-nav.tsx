@@ -3,27 +3,30 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils/cn"
 import {
   LayoutDashboard, Package, Warehouse, ShoppingCart, Users,
   UserCog, BookOpen, BarChart3, Settings, X, Menu
 } from "lucide-react"
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/inventory", label: "Inventory", icon: Warehouse },
-  { href: "/sales", label: "Sales", icon: ShoppingCart },
-  { href: "/customers", label: "Customers", icon: Users },
-  { href: "/employees", label: "Employees", icon: UserCog },
-  { href: "/accounting", label: "Accounting", icon: BookOpen },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+const allNavItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["owner"] },
+  { href: "/products", label: "Products", icon: Package, roles: ["owner", "sales_person"] },
+  { href: "/inventory", label: "Inventory", icon: Warehouse, roles: ["owner"] },
+  { href: "/sales", label: "Sales", icon: ShoppingCart, roles: ["owner", "sales_person"] },
+  { href: "/customers", label: "Customers", icon: Users, roles: ["owner"] },
+  { href: "/employees", label: "Employees", icon: UserCog, roles: ["owner"] },
+  { href: "/accounting", label: "Accounting", icon: BookOpen, roles: ["owner"] },
+  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["owner"] },
+  { href: "/settings", label: "Settings", icon: Settings, roles: ["owner"] },
 ]
 
 export function MobileNav() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const user = useAuthStore((s) => s.user)
+  const navItems = allNavItems.filter((item) => item.roles.includes(user?.role || "sales_person"))
 
   return (
     <>

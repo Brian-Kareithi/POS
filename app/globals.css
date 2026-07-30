@@ -38,72 +38,78 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
-.dark body,
-body.dark,
 .dark {
-  --color-gray-50: #1a1a2e;
-  --color-gray-100: #16213e;
-  --color-gray-200: #1e2a4a;
-  --color-gray-300: #2a3a5c;
-  --color-gray-400: #6b7280;
-  --color-gray-500: #9ca3af;
-  --color-gray-600: #cbd5e1;
-  --color-gray-700: #e2e8f0;
-  --color-gray-900: #f1f5f9;
-  --color-blue-50: #1e3a5f;
-  --color-blue-100: #1e40af;
-  --color-blue-200: #3b82f6;
-  --color-green-50: #14532d;
-  --color-green-100: #166534;
-  --color-red-50: #450a0a;
-  --color-red-100: #7f1d1d;
-  --color-orange-50: #431407;
-  background-color: #0f172a;
-  color: #e2e8f0;
+  --color-gray-50: #111111;
+  --color-gray-100: #1a1a1a;
+  --color-gray-200: #222222;
+  --color-gray-300: #333333;
+  --color-gray-400: #555555;
+  --color-gray-500: #888888;
+  --color-gray-600: #aaaaaa;
+  --color-gray-700: #cccccc;
+  --color-gray-900: #eeeeee;
+  --color-blue-50: #0a1628;
+  --color-blue-100: #0d2137;
+  --color-blue-200: #1a365d;
+  --color-green-50: #0a1a0a;
+  --color-green-100: #0d2b0d;
+  --color-red-50: #1a0a0a;
+  --color-red-100: #2b0d0d;
+  --color-orange-50: #1a140a;
+  background-color: #000000;
+  color: #cccccc;
 }
 
 .dark .bg-white {
-  background-color: #1a1a2e;
-}
-
-.dark .border-gray-200 {
-  border-color: #1e2a4a;
-}
-
-.dark .border-gray-100 {
-  border-color: #1e2a4a;
-}
-
-.dark .text-gray-900 {
-  color: #f1f5f9;
-}
-
-.dark .text-gray-700 {
-  color: #e2e8f0;
-}
-
-.dark .text-gray-600 {
-  color: #cbd5e1;
-}
-
-.dark .text-gray-500 {
-  color: #94a3b8;
-}
-
-.dark .text-gray-400 {
-  color: #64748b;
+  background-color: #111111;
 }
 
 .dark .bg-gray-50 {
-  background-color: #0f172a;
+  background-color: #0a0a0a;
+}
+
+.dark .border-gray-200 {
+  border-color: #222222;
+}
+
+.dark .border-gray-100 {
+  border-color: #1a1a1a;
+}
+
+.dark .text-gray-900 {
+  color: #eeeeee;
+}
+
+.dark .text-gray-700 {
+  color: #cccccc;
+}
+
+.dark .text-gray-600 {
+  color: #aaaaaa;
+}
+
+.dark .text-gray-500 {
+  color: #888888;
+}
+
+.dark .text-gray-400 {
+  color: #555555;
 }
 
 .dark .hover\:bg-gray-50:hover {
-  background-color: #1e293b;
+  background-color: #1a1a1a;
 }
 
 .dark .hover\:bg-gray-100:hover {
-  background-color: #1e293b;
+  background-color: #1a1a1a;
+}
+
+.dark .divide-gray-100 > * + * {
+  border-color: #1a1a1a;
+}
+
+.dark .divide-gray-200 > * + * {
+  border-color: #222222;
 }
 
 @media print {

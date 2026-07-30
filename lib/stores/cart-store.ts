@@ -23,6 +23,7 @@ interface CartState {
   paymentMethod: PaymentMethod
   couponCode?: string
   couponDiscount: number
+  activeCheckoutToken?: string
   addItem: (product: Product, quantity?: number) => void
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
@@ -33,11 +34,13 @@ interface CartState {
   setPaymentMethod: (method: PaymentMethod) => void
   setCoupon: (code: string, discount: number) => void
   removeCoupon: () => void
+  setActiveCheckoutToken: (token?: string) => void
   getSubtotal: () => number
   getTaxTotal: () => number
   getDiscountTotal: () => number
   getTotal: () => number
   getItemCount: () => number
+  getCheckoutItems: () => { productId: string; name: string; quantity: number; unitPrice: number; total: number }[]
 }
 
 export const useCartStore = create<CartState>()(
@@ -124,6 +127,7 @@ export const useCartStore = create<CartState>()(
           paymentMethod: "cash",
           couponCode: undefined,
           couponDiscount: 0,
+          activeCheckoutToken: undefined,
         }),
 
       setCustomer: (id, name) => set({ customerId: id, customerName: name }),
@@ -131,6 +135,7 @@ export const useCartStore = create<CartState>()(
       setPaymentMethod: (method) => set({ paymentMethod: method }),
       setCoupon: (code, discount) => set({ couponCode: code, couponDiscount: discount }),
       removeCoupon: () => set({ couponCode: undefined, couponDiscount: 0 }),
+      setActiveCheckoutToken: (token) => set({ activeCheckoutToken: token }),
 
       getSubtotal: () => {
         const state = get()
@@ -157,6 +162,17 @@ export const useCartStore = create<CartState>()(
 
       getItemCount: () => {
         return get().items.reduce((sum, i) => sum + i.quantity, 0)
+      },
+
+      getCheckoutItems: () => {
+        const state = get()
+        return state.items.map((i) => ({
+          productId: i.productId,
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          total: i.total,
+        }))
       },
     }),
     {

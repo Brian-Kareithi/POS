@@ -18,10 +18,16 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
+const quickUsers = [
+  { email: "owner@mainstreetretail.com", label: "Owner / Director", role: "owner", color: "bg-blue-600 hover:bg-blue-700" },
+  { email: "sales1@mainstreetretail.com", label: "Sales Person", role: "sales_person", color: "bg-gray-700 hover:bg-gray-800" },
+]
+
 export default function LoginPage() {
   const router = useRouter()
   const { login, isLoading } = useAuthStore()
   const [error, setError] = useState<string | null>(null)
+  const [quickLoading, setQuickLoading] = useState<string | null>(null)
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -36,6 +42,18 @@ export default function LoginPage() {
     } catch {
       setError("Invalid email or password")
     }
+  }
+
+  const quickSignIn = async (email: string) => {
+    setQuickLoading(email)
+    setError(null)
+    try {
+      await login(email, "password")
+      router.push("/")
+    } catch {
+      setError("Sign in failed")
+    }
+    setQuickLoading(null)
   }
 
   return (
@@ -76,6 +94,28 @@ export default function LoginPage() {
             Sign in
           </Button>
         </form>
+
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <p className="text-xs text-gray-400 text-center mb-3">Quick sign in as</p>
+          <div className="flex flex-col gap-2">
+            {quickUsers.map((user) => (
+              <button
+                key={user.email}
+                onClick={() => quickSignIn(user.email)}
+                disabled={quickLoading === user.email}
+                className={`${user.color} text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2`}
+              >
+                {quickLoading === user.email ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : null}
+                {user.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Don&apos;t have an account?{" "}
