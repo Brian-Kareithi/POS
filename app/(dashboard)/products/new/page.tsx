@@ -81,21 +81,21 @@ export default function NewProductPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input label="Product Name" error={errors.name?.message} {...register("name")} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select label="Category" options={categories.map((c) => ({ value: c.id, label: c.name }))} placeholder="Select category" error={errors.categoryId?.message} {...register("categoryId")} />
               <Select label="Brand" options={brands.map((b) => ({ value: b.id, label: b.name }))} placeholder="Select brand" {...register("brandId")} />
             </div>
             <Select label="Supplier" options={suppliers.map((s) => ({ value: s.id, label: s.name }))} placeholder="Select supplier" {...register("supplierId")} />
             <Textarea label="Description" {...register("description")} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Cost Price" type="number" step="0.01" error={errors.costPrice?.message} {...register("costPrice")} />
               <Input label="Selling Price" type="number" step="0.01" error={errors.sellingPrice?.message} {...register("sellingPrice")} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select label="Tax Rate" options={TAX_RATES.map((t) => ({ value: t.value, label: t.label }))} {...register("taxRate", { valueAsNumber: true })} />
               <Select label="Unit" options={UNITS.map((u) => ({ value: u.value, label: u.label }))} {...register("unit")} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Min Stock" type="number" error={errors.minStock?.message} {...register("minStock", { valueAsNumber: true })} />
               <Input label="Max Stock" type="number" error={errors.maxStock?.message} {...register("maxStock", { valueAsNumber: true })} />
             </div>

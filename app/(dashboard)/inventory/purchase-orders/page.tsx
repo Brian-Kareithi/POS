@@ -24,7 +24,7 @@ export default function PurchaseOrdersPage() {
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: z.infer<typeof schema>) => {
     addPurchaseOrder({ id: generateId(), businessId: "", orderNumber: generateOrderNumber(), status: "draft", total: 0, ...data, items: [], createdBy: "", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
     reset(); setShowModal(false)
   }

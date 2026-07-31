@@ -22,7 +22,7 @@ export default function BrandsPage() {
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: z.infer<typeof schema>) => {
     addBrand({ id: generateId(), businessId: "", name: data.name, slug: data.name.toLowerCase().replace(/\s+/g, "-"), description: data.description, isActive: true, createdAt: new Date().toISOString() })
     reset(); setShowModal(false)
   }

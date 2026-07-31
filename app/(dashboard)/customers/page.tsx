@@ -40,7 +40,7 @@ export default function CustomersPage() {
       c.email.toLowerCase().includes(search.toLowerCase())
     ), [customers, search])
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: z.infer<typeof schema>) => {
     addCustomer({
       id: generateId(), businessId: "", name: data.name, email: data.email,
       phone: data.phone, address: data.address, notes: data.notes,
@@ -88,7 +88,7 @@ export default function CustomersPage() {
       <Dialog open={showModal} onClose={() => setShowModal(false)} title="Add Customer" size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label="Full Name" error={errors.name?.message as string} {...register("name")} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Email" type="email" error={errors.email?.message as string} {...register("email")} />
             <Input label="Phone" error={errors.phone?.message as string} {...register("phone")} />
           </div>

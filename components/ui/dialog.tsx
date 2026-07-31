@@ -45,9 +45,9 @@ export function Dialog({ open, onClose, title, children, className, size = "md" 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      <div className={cn("w-full rounded-xl bg-white shadow-lg", sizes[size], className)}>
+      <div className={cn("w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl bg-white shadow-lg", sizes[size], className)}>
         {title && (
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4">
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
             <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
               <X className="h-5 w-5" />

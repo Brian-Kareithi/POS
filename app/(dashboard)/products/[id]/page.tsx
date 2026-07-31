@@ -40,31 +40,31 @@ export default function ProductDetailPage() {
 
   const product = products.find((p) => p.id === params.id)
 
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: product?.name || "",
+      categoryId: product?.categoryId || "",
+      brandId: product?.brandId || "",
+      supplierId: product?.supplierId || "",
+      costPrice: product?.costPrice || 0,
+      sellingPrice: product?.sellingPrice || 0,
+      taxRate: product?.taxRate || 0,
+      unit: product?.unit || "",
+      minStock: product?.minStock || 0,
+      maxStock: product?.maxStock || 0,
+      description: product?.description || "",
+    },
+  })
+
   if (!product) {
     return <div className="text-center py-16 text-gray-500">Product not found</div>
   }
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: product.name,
-      categoryId: product.categoryId,
-      brandId: product.brandId || "",
-      supplierId: product.supplierId || "",
-      costPrice: product.costPrice,
-      sellingPrice: product.sellingPrice,
-      taxRate: product.taxRate,
-      unit: product.unit,
-      minStock: product.minStock,
-      maxStock: product.maxStock,
-      description: product.description || "",
-    },
-  })
-
   const onSubmit = async (data: z.infer<typeof productSchema>) => {
     setIsLoading(true)
     await new Promise((r) => setTimeout(r, 500))
-    updateProduct(product.id, data as any)
+    updateProduct(product.id, data)
     setIsLoading(false)
     router.push("/products")
   }
@@ -87,21 +87,21 @@ export default function ProductDetailPage() {
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Input label="Product Name" error={errors.name?.message} {...register("name")} />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Select label="Category" options={categories.map((c) => ({ value: c.id, label: c.name }))} {...register("categoryId")} />
                 <Select label="Brand" options={brands.map((b) => ({ value: b.id, label: b.name }))} placeholder="No brand" {...register("brandId")} />
               </div>
               <Select label="Supplier" options={suppliers.map((s) => ({ value: s.id, label: s.name }))} placeholder="No supplier" {...register("supplierId")} />
               <Textarea label="Description" {...register("description")} />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Cost Price" type="number" step="0.01" {...register("costPrice")} />
                 <Input label="Selling Price" type="number" step="0.01" {...register("sellingPrice")} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Select label="Tax Rate" options={TAX_RATES.map((t) => ({ value: t.value, label: t.label }))} {...register("taxRate", { valueAsNumber: true })} />
                 <Select label="Unit" options={UNITS.map((u) => ({ value: u.value, label: u.label }))} {...register("unit")} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Min Stock" type="number" {...register("minStock", { valueAsNumber: true })} />
                 <Input label="Max Stock" type="number" {...register("maxStock", { valueAsNumber: true })} />
               </div>

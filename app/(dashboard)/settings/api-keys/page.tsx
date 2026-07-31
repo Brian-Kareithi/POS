@@ -22,7 +22,7 @@ export default function ApiKeysPage() {
   const [newKey, setNewKey] = useState("")
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: z.infer<typeof schema>) => {
     const generated = `pos_${generateId().replace(/-/g, "")}`
     setKeys([...keys, { id: generateId(), name: data.name, key: generated, createdAt: new Date().toISOString(), isActive: true }])
     setNewKey(generated)
@@ -54,7 +54,7 @@ export default function ApiKeysPage() {
             <div className="rounded-lg bg-gray-50 p-4">
               <p className="text-xs font-mono break-all text-gray-900">{newKey}</p>
             </div>
-            <p className="text-sm text-orange-600 font-medium">Copy this key now. You won't be able to see it again.</p>
+            <p className="text-sm text-orange-600 font-medium">Copy this key now. You won&apos;t be able to see it again.</p>
             <Button className="w-full" onClick={() => navigator.clipboard.writeText(newKey)}><Copy className="h-4 w-4" />Copy Key</Button>
             <Button variant="secondary" className="w-full" onClick={() => { setShowModal(false); setNewKey("") }}>Done</Button>
           </div>

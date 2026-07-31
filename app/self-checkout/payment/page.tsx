@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { formatCurrency } from "@/lib/utils/format"
 import { PAYMENT_METHODS } from "@/lib/constants"
+import type { PaymentMethod } from "@/lib/types"
 import { CreditCard, ArrowLeft, CheckCircle } from "lucide-react"
 import Link from "next/link"
 
@@ -17,7 +18,7 @@ export default function PaymentPage() {
   const cart = useCartStore()
   const [processing, setProcessing] = useState(false)
   const [completed, setCompleted] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState(cart.paymentMethod)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(cart.paymentMethod)
 
   const handlePay = async () => {
     setProcessing(true)
@@ -69,7 +70,7 @@ export default function PaymentPage() {
 
         <Card>
           <CardContent className="p-4 space-y-4">
-            <Select label="Payment Method" options={PAYMENT_METHODS.map((p) => ({ value: p.value, label: p.label }))} value={paymentMethod} onChange={(e: any) => { setPaymentMethod(e.target.value); cart.setPaymentMethod(e.target.value) }} />
+            <Select label="Payment Method" options={PAYMENT_METHODS.map((p) => ({ value: p.value, label: p.label }))} value={paymentMethod} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { const method = e.target.value as PaymentMethod; setPaymentMethod(method); cart.setPaymentMethod(method) }} />
             <Button className="w-full" size="lg" onClick={handlePay} isLoading={processing} disabled={cart.items.length === 0}>
               <CreditCard className="h-5 w-5" />Pay {formatCurrency(cart.getTotal())}
             </Button>

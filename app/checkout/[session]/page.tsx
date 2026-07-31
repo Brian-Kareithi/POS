@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils/format"
 import { generateId, generateOrderNumber } from "@/lib/utils/generators"
 import { PAYMENT_METHODS } from "@/lib/constants"
+import type { PaymentMethod } from "@/lib/types"
 import { QrCode, ShoppingCart, CreditCard, CheckCircle, AlertCircle, Smartphone } from "lucide-react"
 
 export default function CheckoutPage() {
@@ -21,10 +22,11 @@ export default function CheckoutPage() {
   const completeSession = useCheckoutStore((s) => s.completeSession)
   const addSale = useDataStore((s) => s.addSale)
   const products = useDataStore((s) => s.products)
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "bank_transfer" | "mobile_money">("mobile_money")
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mobile_money")
   const [processing, setProcessing] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [error, setError] = useState("")
+  const [now] = useState(() => Date.now())
 
   if (!session) {
     return (
@@ -105,14 +107,14 @@ export default function CheckoutPage() {
         total: session.total,
         paidAmount: session.total,
         changeAmount: 0,
-        paymentMethod: paymentMethod as any,
+        paymentMethod,
         items: session.items.map((i) => ({
           id: generateId(), saleId: "", productId: i.productId,
           quantity: i.quantity, unitPrice: i.unitPrice, discount: 0, tax: i.total * 0.08, total: i.total,
         })),
-        payments: [{ id: generateId(), saleId: "", method: paymentMethod as any, amount: session.total, status: "completed" as const, createdAt: new Date().toISOString() }],
+        payments: [{ id: generateId(), saleId: "", method: paymentMethod, amount: session.total, status: "completed" as const, createdAt: new Date().toISOString() }],
         createdAt: new Date().toISOString(),
-      } as any)
+      })
       useDataStore.getState().addNotification({
         id: generateId(), userId: "", title: "New Payment Received",
         message: `Payment of ${formatCurrency(session.total)} via ${paymentMethod.replace("_", " ")} completed.`,
@@ -166,7 +168,7 @@ export default function CheckoutPage() {
                 label="Payment Method"
                 options={PAYMENT_METHODS.map((p) => ({ value: p.value, label: p.label }))}
                 value={paymentMethod}
-                onChange={(e: any) => setPaymentMethod(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPaymentMethod(e.target.value as PaymentMethod)}
               />
               {paymentMethod === "mobile_money" && (
                 <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700">
@@ -188,7 +190,7 @@ export default function CheckoutPage() {
         </Card>
 
         <p className="text-center text-xs text-gray-500">
-          Session expires in {Math.max(0, Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 60000))} minutes
+          Session expires in {Math.max(0, Math.floor((new Date(session.expiresAt).getTime() - now) / 60000))} minutes
         </p>
       </div>
     </div>

@@ -25,7 +25,7 @@ export default function TransfersPage() {
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: z.infer<typeof schema>) => {
     addStockTransfer({ id: generateId(), businessId: "", ...data, status: "pending", createdBy: "", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
     reset(); setShowModal(false)
   }
@@ -56,7 +56,7 @@ export default function TransfersPage() {
       <Dialog open={showModal} onClose={() => setShowModal(false)} title="New Stock Transfer" size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Select label="Product" options={products.map((p) => ({ value: p.id, label: p.name }))} placeholder="Select product" {...register("productId")} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select label="From Warehouse" options={warehouses.map((w) => ({ value: w.id, label: w.name }))} placeholder="Select source" {...register("fromWarehouseId")} />
             <Select label="To Warehouse" options={warehouses.map((w) => ({ value: w.id, label: w.name }))} placeholder="Select destination" {...register("toWarehouseId")} />
           </div>

@@ -22,8 +22,8 @@ export default function SuppliersPage() {
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: any) => {
-    addSupplier({ id: generateId(), businessId: "", ...data, isActive: true, createdAt: new Date().toISOString() })
+  const onSubmit = (data: z.infer<typeof schema>) => {
+    addSupplier({ id: generateId(), businessId: "", ...data, address: data.address || "", isActive: true, createdAt: new Date().toISOString() })
     reset(); setShowModal(false)
   }
 
@@ -48,7 +48,7 @@ export default function SuppliersPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label="Company Name" error={errors.name?.message as string} {...register("name")} />
           <Input label="Contact Person" error={errors.contactPerson?.message as string} {...register("contactPerson")} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Email" type="email" error={errors.email?.message as string} {...register("email")} />
             <Input label="Phone" error={errors.phone?.message as string} {...register("phone")} />
           </div>

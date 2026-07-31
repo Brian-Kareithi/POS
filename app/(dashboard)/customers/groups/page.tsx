@@ -22,7 +22,7 @@ export default function CustomerGroupsPage() {
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: z.infer<typeof schema>) => {
     addCustomerGroup({ id: generateId(), businessId: "", name: data.name, discountPercent: data.discountPercent, isActive: true })
     reset(); setShowModal(false)
   }

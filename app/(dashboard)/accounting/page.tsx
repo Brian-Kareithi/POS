@@ -40,7 +40,7 @@ export default function AccountingPage() {
   const totalExpenses = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
   const salesRevenue = sales.reduce((s, sale) => s + sale.total, 0)
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: z.infer<typeof schema>) => {
     addTransaction({ id: generateId(), businessId: "", branchId: "", ...data, date: new Date().toISOString(), createdAt: new Date().toISOString() })
     reset(); setShowModal(false)
   }

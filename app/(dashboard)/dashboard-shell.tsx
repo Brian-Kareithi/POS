@@ -19,13 +19,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const { notifications } = useDataStore()
   const { setUnreadCount } = useNotificationStore()
-  const [ready, setReady] = useState(false)
+  const [ready, setReady] = useState(() => useAuthStore.persist.hasHydrated())
 
   useInitializeData()
 
   useEffect(() => {
     const unsub = useAuthStore.persist.onFinishHydration(() => setReady(true))
-    if (useAuthStore.persist.hasHydrated()) setReady(true)
     return () => unsub()
   }, [])
 

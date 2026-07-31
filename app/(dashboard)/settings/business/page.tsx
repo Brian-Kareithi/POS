@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useForm } from "react-hook-form"
 import { CURRENCIES } from "@/lib/constants"
 import { useState } from "react"
+import type { Business } from "@/lib/types"
 
 export default function BusinessSettingsPage() {
   const { business, setBusiness } = useDataStore()
   const [saved, setSaved] = useState(false)
   const { register, handleSubmit } = useForm({ defaultValues: business || {} })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: Partial<Business>) => {
     setBusiness({ ...business!, ...data })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -32,7 +33,7 @@ export default function BusinessSettingsPage() {
             <Input label="Email" type="email" {...register("email")} />
             <Input label="Phone" {...register("phone")} />
             <Input label="Address" {...register("address")} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select label="Currency" options={CURRENCIES.map((c) => ({ value: c.value, label: c.label }))} {...register("currency")} />
               <Input label="Timezone" {...register("timezone")} />
             </div>

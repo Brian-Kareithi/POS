@@ -42,6 +42,8 @@ interface DataState {
   updateProduct: (id: string, updates: Partial<Product>) => void
   removeProduct: (id: string) => void
   addSale: (sale: Sale) => void
+  updateSale: (id: string, updates: Partial<Sale>) => void
+  removeSale: (id: string) => void
   addNotification: (notification: Notification) => void
   markNotificationRead: (id: string) => void
   markAllNotificationsRead: () => void
@@ -103,6 +105,12 @@ export const useDataStore = create<DataState>()((set) => ({
     set((s) => ({ products: s.products.filter((p) => p.id !== id) })),
 
   addSale: (sale) => set((s) => ({ sales: [sale, ...s.sales] })),
+  updateSale: (id, updates) =>
+    set((s) => ({
+      sales: s.sales.map((sale) => (sale.id === id ? { ...sale, ...updates } : sale)),
+    })),
+  removeSale: (id) =>
+    set((s) => ({ sales: s.sales.filter((sale) => sale.id !== id) })),
 
   addNotification: (notification) =>
     set((s) => ({ notifications: [notification, ...s.notifications] })),

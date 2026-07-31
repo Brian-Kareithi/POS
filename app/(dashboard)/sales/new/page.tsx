@@ -17,6 +17,7 @@ import { Dialog } from "@/components/ui/dialog"
 import { formatCurrency } from "@/lib/utils/format"
 import { generateId, generateOrderNumber } from "@/lib/utils/generators"
 import { PAYMENT_METHODS } from "@/lib/constants"
+import type { PaymentMethod } from "@/lib/types"
 import { Plus, Minus, Trash2, Search, X, Barcode, User, ShoppingCart, Percent } from "lucide-react"
 
 export default function NewSalePage() {
@@ -85,7 +86,7 @@ export default function NewSalePage() {
       customer: customers.find((c) => c.id === cart.customerId),
       createdAt: new Date().toISOString(),
     }
-    addSale(sale as any)
+    addSale(sale)
     addNotification({
       id: generateId(),
       userId: "",
@@ -173,7 +174,7 @@ export default function NewSalePage() {
               <div className="border-t border-gray-200 pt-3 flex justify-between text-lg font-bold"><span>Total</span><span>{formatCurrency(total)}</span></div>
 
               <div className="pt-4 space-y-3">
-                <Select label="Payment Method" options={PAYMENT_METHODS.map((p) => ({ value: p.value, label: p.label }))} value={cart.paymentMethod} onChange={(e: any) => cart.setPaymentMethod(e.target.value)} />
+                <Select label="Payment Method" options={PAYMENT_METHODS.map((p) => ({ value: p.value, label: p.label }))} value={cart.paymentMethod} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => cart.setPaymentMethod(e.target.value as PaymentMethod)} />
                 <Input label="Amount Paid" type="number" step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} placeholder={formatCurrency(total)} />
                 {parseFloat(paidAmount) > total && (
                   <p className="text-sm text-green-600">Change: {formatCurrency(parseFloat(paidAmount) - total)}</p>

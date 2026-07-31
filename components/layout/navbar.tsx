@@ -37,7 +37,7 @@ export function Navbar() {
         </button>
 
         <div className="hidden md:block">
-          <SearchInput placeholder="Search products, sales, customers..." className="w-80" />
+          <SearchInput placeholder="Search products, sales, customers..." className="w-56 lg:w-80" />
         </div>
 
         <button

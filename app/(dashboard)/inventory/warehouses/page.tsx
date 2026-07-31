@@ -22,7 +22,7 @@ export default function WarehousesPage() {
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: z.infer<typeof schema>) => {
     addWarehouse({ id: generateId(), businessId: "", name: data.name, address: data.address, isActive: true, createdAt: new Date().toISOString() })
     reset(); setShowModal(false)
   }
