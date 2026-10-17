@@ -49,7 +49,10 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
   const available = customer ? Math.max(0, (customer.creditLimit ?? 0) - (customer.amountOwed ?? 0)) : 0
   const canUseAccount = !!customer && remaining > 0 && remaining <= available
 
-  const target = Math.min(parseFloat(amount) || remaining, remaining)
+  // The amount box shows the full balance by default; type less to split across methods (e.g. half M-Pesa, half cash).
+  const enteredAmount = amount.trim() === "" ? remaining : Number(amount)
+  const target = Number.isFinite(enteredAmount) ? Math.min(enteredAmount, remaining) : 0
+  const setShare = (fraction: number) => setAmount(String(Math.round(remaining * fraction * 100) / 100))
   const receivedNum = parseFloat(received) || 0
   const change = method === "cash" && receivedNum > target ? receivedNum - target : 0
 
@@ -65,8 +68,10 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
     if (remaining <= 0) return
     if (target <= 0) return setError("Enter an amount.")
     if (method === "cash") {
-      if (receivedNum < target) return setError("Cash received is less than the amount.")
-      setCashTendered((c) => c + receivedNum)
+      // Nothing typed means the customer handed over exactly the amount.
+      const got = receivedNum || target
+      if (got < target) return setError("Cash received is less than the amount.")
+      setCashTendered((c) => c + got)
       return push({ method: "cash", amount: target })
     }
     if (method === "mobile_money") {
@@ -131,11 +136,18 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
               ))}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Amount" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={String(remaining)} />
+              <Input label={method === "mobile_money" ? "Amount to request" : "Amount"} type="number" min="0" step="0.01" value={amount === "" ? String(remaining) : amount} onChange={(e) => setAmount(e.target.value)} />
               {method === "cash" && <Input label="Cash received" type="number" min="0" value={received} onChange={(e) => setReceived(e.target.value)} placeholder={String(Math.ceil(target))} />}
               {method === "mobile_money" && <Input label="Customer phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0712 345 678" />}
               {(method === "card" || method === "bank_transfer") && <Input label={method === "card" ? "Approval code (optional)" : "Reference (optional)"} value={reference} onChange={(e) => setReference(e.target.value)} />}
             </div>
+            {remaining > 1 && (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-gray-500">Pay with {label(method)}:</span>
+                <button onClick={() => setAmount("")} className={`rounded-full border px-3 py-1 ${amount === "" ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 hover:bg-gray-50"}`}>Full {formatCurrency(remaining)}</button>
+                <button onClick={() => setShare(0.5)} className="rounded-full border border-gray-200 px-3 py-1 hover:bg-gray-50">Half {formatCurrency(Math.round(remaining * 50) / 100)}</button>
+              </div>
+            )}
             {method === "cash" && receivedNum > 0 && (
               <div className="flex flex-wrap gap-2">
                 {[Math.ceil(target), 500, 1000, 2000].filter((v, i, a) => v >= target && a.indexOf(v) === i).map((v) => (

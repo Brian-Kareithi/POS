@@ -30,6 +30,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true })
         try {
           await new Promise((r) => setTimeout(r, 800))
+          // Demo accounts share this local-only password. Production sign-in requires a server auth provider.
+          if (password !== "password") throw new Error("Invalid credentials")
           const { mockUsers } = await import("@/lib/constants/mock-data")
           // Saved staff (including anyone added in Staff settings) come first, then the demo accounts.
           const { useDataStore } = await import("@/lib/stores/data-store")

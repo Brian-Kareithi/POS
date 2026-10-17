@@ -21,3 +21,10 @@ export function generateOrderNumber(): string {
   const seq = Math.floor(Math.random() * 9999).toString().padStart(4, "0")
   return `ORD-${y}${m}${d}-${seq}`
 }
+
+export function generateReceiptNumber(prefix: "QR" | "SC" | "Q"): string {
+  const date = new Date()
+  const stamp = `${date.getFullYear().toString().slice(-2)}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`
+  const suffix = Math.floor(Math.random() * 90000 + 10000)
+  return `RCP-${prefix}-${stamp}-${suffix}`
+}

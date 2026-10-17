@@ -16,7 +16,7 @@ import { StatsCard } from "@/components/ui/stats-card"
 import { Dialog } from "@/components/ui/dialog"
 import { EmptyState } from "@/components/ui/empty-state"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { generateId, generateOrderNumber } from "@/lib/utils/generators"
+import { generateId, generateOrderNumber, generateReceiptNumber } from "@/lib/utils/generators"
 import { ArrowLeft, FileText, Plus, Trash2, CheckCircle2, DollarSign } from "lucide-react"
 
 interface QuoteItemDraft {
@@ -115,7 +115,7 @@ export default function SalesQuotesPage() {
     if (!quote) return
     quote.items?.forEach((i) => adjustStock(i.productId, -i.quantity))
     updateSale(id, {
-      receiptNumber: `RCP-Q-${Math.floor(Math.random() * 90000 + 10000)}`,
+      receiptNumber: generateReceiptNumber("Q"),
       synced: true,
       status: "completed",
       paidAmount: quote.total,

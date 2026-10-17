@@ -14,6 +14,7 @@ import { completeSale, priceLines, type PaymentInput } from "@/lib/services/chec
 import { can } from "@/lib/permissions"
 import { notify } from "@/lib/toast"
 import { useScannerInput } from "@/lib/hooks/use-scanner-input"
+import { fetchProductImage } from "@/lib/services/product-image"
 import { BarcodeScanner } from "@/components/pos/barcode-scanner"
 import { ProductFormDialog } from "@/components/pos/product-form-dialog"
 import { PaymentDialog } from "@/components/pos/payment-dialog"
@@ -45,6 +46,8 @@ export function PosTerminal() {
   const [customerId, setCustomerId] = useState<string | undefined>()
   const [discount, setDiscount] = useState<DiscountState>(noDiscount)
   const [notice, setNotice] = useState("")
+  // The product just added by a scan, so a wrong scan can be undone in one tap.
+  const [lastScan, setLastScan] = useState<{ id: string; name: string } | null>(null)
   const [warning, setWarning] = useState("")
   const [unknownCode, setUnknownCode] = useState("")
   const [scanOpen, setScanOpen] = useState(false)
@@ -106,17 +109,39 @@ export function PosTerminal() {
     setNotice("")
     setWarning("")
     setUnknownCode("")
+    setLastScan(null)
     return true
+  }
+
+  // Fetch a photo online for a product that has none, then save it and refresh any cart line.
+  const attachImage = async (product: Product) => {
+    if (product.image) return
+    const image = await fetchProductImage(product.barcode, product.name)
+    if (!image) return
+    useDataStore.getState().updateProduct(product.id, { image })
+    setOrder((current) => current.map((line) => (line.product.id === product.id ? { ...line, product: { ...line.product, image } } : line)))
   }
 
   const handleCode = (code: string) => {
     const product = findProductByCode(products, code)
     if (!product) {
       setUnknownCode(code.trim())
+      setLastScan(null)
       setWarning(`No product found for "${code.trim()}".`)
       return
     }
-    if (addItem(product)) setNotice(`Added ${product.name}`)
+    if (addItem(product)) {
+      setNotice(`Added ${product.name}`)
+      setLastScan({ id: product.id, name: product.name })
+      void attachImage(product)
+    }
+  }
+
+  const undoScan = () => {
+    if (!lastScan) return
+    updateQuantity(lastScan.id, -1)
+    setNotice("")
+    setLastScan(null)
   }
 
   useScannerInput(handleCode, !scanOpen && !addOpen && !payOpen && !customerOpen && !discountOpen && !heldOpen && !receipt)
@@ -270,6 +295,16 @@ export function PosTerminal() {
           </div>
         )}
 
+        {lastScan && (
+          <div role="status" className="anim-pop mx-4 mt-3 flex items-center justify-between gap-2 rounded-lg bg-pos-accent px-3 py-2 text-xs text-pos-green">
+            <span className="min-w-0 truncate">Scanned and added <strong>{lastScan.name}</strong></span>
+            <span className="flex shrink-0 items-center gap-3">
+              <button onClick={undoScan} className="font-semibold underline">Undo</button>
+              <button aria-label="Dismiss" onClick={() => setLastScan(null)}><X size={13} /></button>
+            </span>
+          </div>
+        )}
+
         <div className="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none]">
           {[{ id: "all", name: "All" }, ...categories.filter((c) => c.isActive)].map((category) => (
             <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`flex min-w-[82px] flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${activeCategory === category.id ? "border-pos-accent-line bg-pos-accent text-pos-green" : "border-transparent bg-white text-pos-text hover:border-pos-line-strong"}`}>
@@ -319,11 +354,12 @@ export function PosTerminal() {
         </div>
       </section>
 
-      <button onClick={() => setOrderOpen(true)} className="fixed inset-x-4 bottom-4 z-10 flex h-12 items-center justify-between rounded-xl bg-pos-brand px-4 text-xs font-semibold text-white shadow-lg md:hidden">
-        <span>View order · {itemCount} items</span><span>{formatCurrency(priced.total)}</span>
-      </button>
+      {itemCount > 0 && !orderOpen && <button onClick={() => setOrderOpen(true)} className="anim-pop fixed inset-x-4 bottom-4 z-10 flex h-12 items-center justify-between rounded-xl bg-pos-brand px-4 text-xs font-semibold text-white shadow-lg md:hidden">
+        <span>View order · {itemCount} {itemCount === 1 ? "item" : "items"}</span><span>{formatCurrency(priced.total)}</span>
+      </button>}
+      {orderOpen && <div className="anim-overlay fixed inset-0 z-10 bg-black/40 md:hidden" onClick={() => setOrderOpen(false)} />}
 
-      <aside className={`flex w-[min(340px,38vw)] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:top-[20vh] max-md:z-20 max-md:w-auto ${orderOpen ? "" : "max-md:hidden"}`}>
+      <aside className={`flex w-[min(340px,38vw)] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:top-16 max-md:z-20 max-md:w-auto ${orderOpen ? "max-md:anim-sheet" : "max-md:hidden"}`}>
         <header className="flex h-[60px] shrink-0 items-center justify-between border-b border-pos-line px-4">
           <div><h1 className="text-sm font-bold">Current Sale</h1><p className="text-[10px] text-pos-muted">{user?.name ?? "Guest"} · {itemCount} items</p></div>
           <div className="flex items-center gap-1">
@@ -372,7 +408,7 @@ export function PosTerminal() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         initialBarcode={unknownCode}
-        onCreated={(product) => { setWarning(""); setUnknownCode(""); addItem(product); setNotice(`${product.name} added to the catalog`) }}
+        onCreated={(product) => { setWarning(""); setUnknownCode(""); addItem(product); setNotice(`${product.name} added to the catalog`); void attachImage(product) }}
       />
       <CustomerPicker open={customerOpen} onClose={() => setCustomerOpen(false)} onSelect={(c) => { setCustomerId(c?.id); setCustomerOpen(false) }} />
       <DiscountDialog open={discountOpen} subtotal={subtotal} customer={customer} current={discount} onClose={() => setDiscountOpen(false)} onApply={(state) => { setDiscount(state); setDiscountOpen(false) }} />

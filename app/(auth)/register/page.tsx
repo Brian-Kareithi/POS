@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -23,36 +22,14 @@ const registerSchema = z.object({
 type RegisterForm = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
   })
 
-  const onSubmit = async (data: RegisterForm) => {
-    setError(null)
-    setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setSuccess(true)
-    setIsLoading(false)
-  }
-
-  if (success) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 mb-4">
-            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-1">Registration successful!</h2>
-          <p className="text-sm text-gray-500 mb-6">Please check your email to verify your account.</p>
-          <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium text-sm">Go to sign in</Link>
-        </CardContent>
-      </Card>
-    )
+  const onSubmit = () => {
+    setError("Account registration is not enabled in this demo. Please contact your administrator.")
   }
 
   return (
@@ -70,7 +47,7 @@ export default function RegisterPage() {
           <Input label="Email" type="email" placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
           <Input label="Password" type="password" error={errors.password?.message} {...register("password")} />
           <Input label="Confirm Password" type="password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
-          <Button type="submit" className="w-full" isLoading={isLoading}>Create account</Button>
+          <Button type="submit" className="w-full">Create account</Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-500">

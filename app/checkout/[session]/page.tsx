@@ -10,7 +10,7 @@ import { Select } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { formatCurrency } from "@/lib/utils/format"
-import { generateId, generateOrderNumber } from "@/lib/utils/generators"
+import { generateId, generateOrderNumber, generateReceiptNumber } from "@/lib/utils/generators"
 import { PAYMENT_METHODS } from "@/lib/constants"
 import type { CheckoutSession, CheckoutSessionItem, PaymentMethod } from "@/lib/types"
 import { CreditCard, CheckCircle, AlertCircle, Smartphone } from "lucide-react"
@@ -179,7 +179,7 @@ function CheckoutPageInner() {
       branchId: "",
       userId: "",
       orderNumber: generateOrderNumber(),
-      receiptNumber: `RCP-QR-${Math.floor(Math.random() * 90000 + 10000)}`,
+      receiptNumber: generateReceiptNumber("QR"),
       synced: true,
       status: "completed",
       subtotal,

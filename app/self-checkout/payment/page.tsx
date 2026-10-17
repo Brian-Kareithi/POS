@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { formatCurrency } from "@/lib/utils/format"
-import { generateId, generateOrderNumber } from "@/lib/utils/generators"
+import { generateId, generateOrderNumber, generateReceiptNumber } from "@/lib/utils/generators"
 import { PAYMENT_METHODS } from "@/lib/constants"
 import type { PaymentMethod } from "@/lib/types"
 import { CreditCard, ArrowLeft, CheckCircle } from "lucide-react"
@@ -39,7 +39,7 @@ export default function PaymentPage() {
       branchId: "",
       customerId: cart.customerId,
       userId: "",
-      receiptNumber: `RCP-SC-${Math.floor(Math.random() * 90000 + 10000)}`,
+      receiptNumber: generateReceiptNumber("SC"),
       synced: true,
       orderNumber: generateOrderNumber(),
       status: "completed" as const,
