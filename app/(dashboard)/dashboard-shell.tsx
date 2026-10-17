@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useSyncExternalStore } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { routeAllowed, landingFor } from "@/lib/navigation"
@@ -22,13 +22,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const allowed = routeAllowed(role, pathname)
   const { notifications } = useDataStore()
   const { setUnreadCount } = useNotificationStore()
-  const [ready, setReady] = useState(() => useAuthStore.persist?.hasHydrated() ?? false)
+  // Subscribe to persist hydration; the snapshot is re-read after subscribing so a hydration that
+  // finishes between render and effect cannot be missed (which left the loading skeleton up forever).
+  const ready = useSyncExternalStore(
+    (cb) => useAuthStore.persist.onFinishHydration(cb),
+    () => useAuthStore.persist.hasHydrated(),
+    () => false
+  )
 
   useInitializeData()
-
-  useEffect(() => {
-    return useAuthStore.persist?.onFinishHydration(() => setReady(true))
-  }, [])
 
   useEffect(() => {
     if (ready && !isAuthenticated) {
