@@ -131,7 +131,7 @@ export default function SalesQuotesPage() {
     addNotification({
       id: generateId(),
       userId: "",
-      title: "Quote Converted to Sale",
+      title: "Quote Converted to Sale", roles: ["owner", "manager", "cashier"],
       message: `Quote ${quote.orderNumber} for ${formatCurrency(quote.total)} was converted to a sale.`,
       type: "success",
       read: false,

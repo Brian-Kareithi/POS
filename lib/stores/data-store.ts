@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware"
 import { getStock, branchStockMap } from "@/lib/utils/stock"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { notify } from "@/lib/toast"
+import { audienceForEntity, isVisibleTo } from "@/lib/notifications"
 import type {
   Business, Branch, Warehouse, Category, Brand, Supplier,
   Product, Customer, CustomerGroup, Employee, Notification, User,
@@ -22,7 +23,7 @@ function auditEntry(action: string, entity: string, detail: string, severity: Au
 function alertFor(entry: AuditLog): Notification[] {
   if (entry.severity === "info") return []
   if (typeof window !== "undefined") (entry.severity === "critical" ? notify.error : notify.warning)(entry.action, entry.detail)
-  return [{ id: rid(), userId: "", title: entry.action, message: entry.detail, type: entry.severity === "critical" ? "error" : "warning", read: false, createdAt: entry.createdAt }]
+  return [{ id: rid(), userId: "", title: entry.action, message: entry.detail, type: entry.severity === "critical" ? "error" : "warning", read: false, roles: audienceForEntity(entry.entity), createdAt: entry.createdAt }]
 }
 
 interface DataState {
@@ -262,9 +263,11 @@ export const useDataStore = create<DataState>()(persist((set) => ({
       ),
     })),
   markAllNotificationsRead: () =>
-    set((s) => ({
-      notifications: s.notifications.map((n) => ({ ...n, read: true })),
-    })),
+    set((s) => {
+      const user = useAuthStore.getState().user
+      // Only the notifications this person can see; others stay unread for their own audience.
+      return { notifications: s.notifications.map((n) => (isVisibleTo(n, user) ? { ...n, read: true } : n)) }
+    }),
 
   addTransaction: (transaction) =>
     set((s) => ({ transactions: [...s.transactions, transaction] })),

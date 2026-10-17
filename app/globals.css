@@ -245,3 +245,47 @@ html.theme-fade, html.theme-fade * { transition: background-color 200ms ease, bo
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Responsive tables: stacked cards on phones (labels come from <Table>). */
+@media (max-width: 767px) {
+  .rt thead { display: none; }
+  .rt, .rt tbody, .rt tr, .rt td { display: block; width: 100%; }
+  .rt tbody tr { padding: 0.75rem 1rem; }
+  .rt tbody td {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 0.3rem 0; text-align: right; white-space: normal; overflow-wrap: anywhere;
+  }
+  .rt tbody td::before {
+    content: attr(data-label); flex-shrink: 0; text-align: left;
+    font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-gray-500);
+  }
+  .rt tbody td[data-label=""]::before, .rt tbody td:first-child::before { display: none; }
+  .rt tbody td:first-child { display: block; text-align: left; padding-bottom: 0.5rem; font-weight: 500; }
+  .rt tbody td[data-label=""] { justify-content: flex-end; }
+  .rt tbody td[colspan] { display: block; text-align: center; }
+}
+
+/* Expandable rows on phones: summary first, details on tap. */
+@media (max-width: 767px) {
+  .rt tbody tr[data-expandable] td[data-extra] { display: none; }
+  .rt tbody tr[data-expandable][data-open] td[data-extra] { display: flex; animation: fade-in 150ms ease-out both; }
+  .rt tbody tr[data-expandable] { cursor: pointer; }
+  .rt tbody tr[data-expandable]:focus-visible { outline: 2px solid var(--color-blue-600); outline-offset: -2px; }
+  .rt tbody tr[data-expandable] td:first-child { position: relative; padding-right: 1.75rem; }
+  .rt tbody tr[data-expandable] td:first-child::after {
+    content: ""; position: absolute; right: 0.25rem; top: 0.35rem; width: 0.5rem; height: 0.5rem;
+    border-right: 2px solid var(--color-gray-400); border-bottom: 2px solid var(--color-gray-400);
+    transform: rotate(45deg); transition: transform 180ms ease;
+  }
+  .rt tbody tr[data-expandable][data-open] td:first-child::after { transform: rotate(-135deg); top: 0.6rem; }
+  .rt tbody tr[data-expandable][data-open] { background: var(--color-gray-50); }
+}
+
+/* Page-header actions: even grid on phones, tidy row on larger screens. */
+.page-actions > a, .page-actions > button { display: inline-flex; }
+@media (max-width: 639px) {
+  .page-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .page-actions > :first-child { grid-column: span 2; }
+  .page-actions > a, .page-actions > button { display: flex; }
+  .page-actions > a > button, .page-actions > button { width: 100%; }
+}

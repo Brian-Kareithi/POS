@@ -11,19 +11,19 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", isLoading, children, disabled, ...props }, ref) => {
-    const base = "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 rounded-lg"
+    const base = "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-lg font-medium transition-all select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0"
     const variants = {
-      primary: "bg-blue-600 text-white hover:bg-blue-700",
-      secondary: "bg-white text-gray-900 border border-gray-200 hover:bg-gray-50",
-      danger: "bg-red-600 text-white hover:bg-red-700",
+      primary: "bg-blue-600 text-white shadow-sm hover:bg-blue-700",
+      secondary: "bg-white text-gray-700 border border-gray-200 shadow-sm hover:bg-gray-50 hover:text-gray-900",
+      danger: "bg-red-600 text-white shadow-sm hover:bg-red-700",
       ghost: "text-gray-600 hover:bg-gray-100",
-      success: "bg-green-600 text-white hover:bg-green-700",
-      warning: "bg-orange-500 text-white hover:bg-orange-600",
+      success: "bg-green-600 text-white shadow-sm hover:bg-green-700",
+      warning: "bg-orange-500 text-white shadow-sm hover:bg-orange-600",
     }
     const sizes = {
       sm: "h-8 px-3 text-sm gap-1.5",
       md: "h-10 px-4 text-sm gap-2",
-      lg: "h-12 px-6 text-base gap-2",
+      lg: "h-12 px-6 text-base gap-2 [&_svg]:h-5 [&_svg]:w-5",
     }
 
     return (

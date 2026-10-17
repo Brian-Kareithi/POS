@@ -76,7 +76,7 @@ export default function PaymentPage() {
     addNotification({
       id: generateId(),
       userId: "",
-      title: "New Self-Checkout Sale",
+      title: "New Self-Checkout Sale", roles: ["owner", "manager", "cashier"],
       message: `Sale ${sale.orderNumber} for ${formatCurrency(total)} completed.`,
       type: "success",
       read: false,

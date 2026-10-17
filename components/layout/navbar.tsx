@@ -30,7 +30,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="relative h-14 shrink-0 bg-white shadow-sm lg:rounded-xl flex items-center justify-between px-3 sm:px-4 lg:px-5 gap-2 sm:gap-4">
+    <header className="relative h-14 shrink-0 bg-white shadow-sm ring-1 ring-black/5 rounded-xl lg:ring-0 flex items-center justify-between px-3 sm:px-4 lg:px-5 gap-2 sm:gap-4">
       <div className="flex items-center gap-3">
         <button
           onClick={toggleSidebar}
@@ -52,7 +52,7 @@ export function Navbar() {
       </div>
 
       {showSearch && (
-        <div className="absolute top-14 left-0 right-0 p-3 bg-white shadow-md border-b border-gray-200 md:hidden z-30">
+        <div className="absolute top-full left-0 right-0 mt-2 rounded-xl p-3 bg-white shadow-lg ring-1 ring-black/5 md:hidden z-30">
           <SearchInput placeholder="Search..." autoFocus />
         </div>
       )}

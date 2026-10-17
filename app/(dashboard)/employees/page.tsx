@@ -140,7 +140,7 @@ export default function EmployeesPage() {
         <CardHeader><h3 className="text-lg font-semibold text-gray-900">What each role can do</h3><p className="text-xs text-gray-500">Refunds, price changes and stock edits are limited to the right people. Cashiers can ask a manager to approve with a PIN.</p></CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
+            <Table scroll>
               <TableHeader>
                 <TableRow>
                   <TableHead>Permission</TableHead>

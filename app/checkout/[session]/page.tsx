@@ -204,7 +204,7 @@ function CheckoutPageInner() {
     })
     session.items.forEach((i) => useDataStore.getState().adjustStock(i.productId, -i.quantity))
     useDataStore.getState().addNotification({
-      id: generateId(), userId: "", title: "New Payment Received",
+      id: generateId(), userId: "", title: "New Payment Received", roles: ["owner", "manager", "cashier"],
       message: `Payment of ${formatCurrency(subtotal + taxTotal - discountTotal)} via ${paymentMethod.replace("_", " ")} completed.`,
       type: "success", read: false, createdAt: new Date().toISOString(),
     })

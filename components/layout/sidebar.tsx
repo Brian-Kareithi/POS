@@ -8,6 +8,7 @@ import { useAuthStore } from "@/lib/stores/auth-store"
 import { APP_NAME } from "@/lib/constants"
 import { ROLE_LABELS } from "@/lib/permissions"
 import { navFor, activeHref } from "@/lib/navigation"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { LogOut, X } from "lucide-react"
 
 export function Sidebar() {
@@ -23,12 +24,12 @@ export function Sidebar() {
   return (
     <>
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={toggleSidebar} />
+        <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] anim-overlay lg:hidden" onClick={toggleSidebar} />
       )}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 flex flex-col overscroll-contain transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto lg:w-60 lg:shrink-0 lg:rounded-xl lg:border-0 lg:shadow-sm",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed bottom-3 left-3 top-3 z-50 w-[17rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col overscroll-contain transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto lg:w-60 lg:max-w-none lg:shrink-0 lg:rounded-xl lg:shadow-sm lg:ring-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-[110%]"
         )}
       >
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
@@ -70,17 +71,18 @@ export function Sidebar() {
           ))}
         </nav>
 
-        <div className="border-t border-gray-200 p-3">
+        <div className="flex items-center gap-1 border-t border-gray-200 p-3">
           <button
             onClick={() => {
               logout()
               router.push("/login")
             }}
-            className="flex w-full items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
           >
             <LogOut className="h-5 w-5 flex-shrink-0" />
             Logout
           </button>
+          <ThemeToggle className="shrink-0" />
         </div>
 
       </aside>

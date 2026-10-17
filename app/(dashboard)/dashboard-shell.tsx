@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { routeAllowed, landingFor } from "@/lib/navigation"
+import { notificationsFor } from "@/lib/notifications"
 import { useInitializeData } from "@/lib/hooks/use-initialize-data"
 import { useDataStore } from "@/lib/stores/data-store"
 import { useNotificationStore } from "@/lib/stores/notification-store"
@@ -11,14 +12,13 @@ import { ShellSkeleton } from "@/components/ui/skeleton"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Navbar } from "@/components/layout/navbar"
 import { Breadcrumbs } from "@/components/layout/breadcrumbs"
-import { BottomNav } from "@/components/layout/bottom-nav"
-import { MobileNav } from "@/components/layout/mobile-nav"
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const role = useAuthStore((s) => s.user?.role)
+  const user = useAuthStore((s) => s.user)
   const allowed = routeAllowed(role, pathname)
   const { notifications } = useDataStore()
   const { setUnreadCount } = useNotificationStore()
@@ -43,9 +43,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [ready, isAuthenticated, allowed, role, router])
 
   useEffect(() => {
-    const unread = notifications.filter((n) => !n.read).length
+    const unread = notificationsFor(notifications, user).filter((n) => !n.read).length
     setUnreadCount(unread)
-  }, [notifications, setUnreadCount])
+  }, [notifications, user, setUnreadCount])
 
   if (!ready) return <ShellSkeleton />
 
@@ -54,17 +54,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const isPos = pathname === "/"
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-[#edf2f0] p-0 dark:bg-black lg:gap-3 lg:p-3">
+    <div className="flex h-dvh overflow-hidden bg-[#edf2f0] p-2 dark:bg-black lg:gap-3 lg:p-3">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col lg:gap-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-2 lg:gap-3">
         <Navbar />
-        <main className={isPos ? "min-h-0 flex-1 overflow-hidden p-2 pb-16 lg:p-0" : "flex-1 overflow-y-auto p-4 pb-20 lg:rounded-xl lg:p-6 lg:pb-6"}>
+        <main className={isPos ? "min-h-0 flex-1 overflow-hidden lg:p-0" : "flex-1 overflow-y-auto rounded-xl p-2 sm:p-4 lg:p-6"}>
           {!isPos && <Breadcrumbs />}
           <div key={pathname} className={isPos ? "anim-page h-full" : "anim-page"}>{children}</div>
         </main>
       </div>
-      <BottomNav />
-      <MobileNav />
     </div>
   )
 }

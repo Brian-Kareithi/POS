@@ -1,6 +1,9 @@
 "use client"
 
 import { useDataStore } from "@/lib/stores/data-store"
+import { useAuthStore } from "@/lib/stores/auth-store"
+import { notificationsFor } from "@/lib/notifications"
+import { ROLE_LABELS } from "@/lib/permissions"
 import { useNotificationStore } from "@/lib/stores/notification-store"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
@@ -10,7 +13,9 @@ import { formatDateTime } from "@/lib/utils/format"
 import { Bell, CheckCheck } from "lucide-react"
 
 export default function NotificationsPage() {
-  const { notifications, markNotificationRead, markAllNotificationsRead } = useDataStore()
+  const { notifications: all, markNotificationRead, markAllNotificationsRead } = useDataStore()
+  const user = useAuthStore((s) => s.user)
+  const notifications = notificationsFor(all, user)
   const { reset } = useNotificationStore()
 
   const handleMarkAllRead = () => {
@@ -20,7 +25,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Notifications" description={`${notifications.filter((n) => !n.read).length} unread`}>
+      <PageHeader title="Notifications" description={`${notifications.filter((n) => !n.read).length} unread${user ? ` · alerts for ${ROLE_LABELS[user.role]}` : ""}`}>
         <Button variant="secondary" onClick={handleMarkAllRead} disabled={notifications.every((n) => n.read)}>
           <CheckCheck className="h-4 w-4" />Mark All Read
         </Button>

@@ -1,7 +1,7 @@
 import { generateId } from "../utils/generators"
 import type {
   Sale, PurchaseOrder, StockTransfer, Transaction, Notification, PaymentMethod, StockAdjustment,
-  AuditLog, ShiftRecord, Promotion,
+  AuditLog, ShiftRecord, Promotion, Role,
 } from "../types"
 import {
   mockBusiness, mockUsers, mockProducts, mockCustomers, mockSuppliers, mockWarehouses, mockBranches, eastleighBranchId,
@@ -208,12 +208,12 @@ seedTransactions.sort((a, b) => b.date.localeCompare(a.date))
 
 // ---------- Notifications, adjustments ----------
 export const seedNotifications: Notification[] = [
-  { title: "Low stock alert", message: "Kit Kat 45g is running low at the Westlands Store.", type: "warning" as const },
-  { title: "Credit payment due", message: "Fatuma Hassan's account payment is due this week.", type: "warning" as const },
-  { title: "Purchase order received", message: "PO-3100 from Savanna Distributors Ltd was received.", type: "success" as const },
-  { title: "Daily summary ready", message: "Yesterday's sales summary is ready to review.", type: "info" as const },
-  { title: "New customer", message: "Njeri Wambui joined the VIP group.", type: "info" as const },
-].map((n, i) => ({ id: generateId(), userId: owner.id, ...n, read: i > 1, createdAt: daysAgo(i) }))
+  { title: "Low stock alert", message: "Kit Kat 45g is running low at the Westlands Store.", type: "warning" as const, roles: ["owner", "manager", "stockkeeper"] as Role[] },
+  { title: "Credit payment due", message: "Fatuma Hassan's account payment is due this week.", type: "warning" as const, roles: ["owner", "manager"] as Role[] },
+  { title: "Purchase order received", message: "PO-3100 from Savanna Distributors Ltd was received.", type: "success" as const, roles: ["owner", "manager", "stockkeeper"] as Role[] },
+  { title: "Daily summary ready", message: "Yesterday's sales summary is ready to review.", type: "info" as const, roles: ["owner", "manager"] as Role[] },
+  { title: "New customer", message: "Njeri Wambui joined the VIP group.", type: "info" as const, roles: ["owner", "manager", "cashier"] as Role[] },
+].map((n, i) => ({ id: generateId(), userId: "", ...n, read: i > 1, createdAt: daysAgo(i) }))
 
 export const seedAdjustments: StockAdjustment[] = mockProducts.slice(0, 8).map((product, i) => ({
   id: generateId(), productId: product.id, productName: product.name, sku: product.sku,

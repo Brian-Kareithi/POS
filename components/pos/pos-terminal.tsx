@@ -319,11 +319,11 @@ export function PosTerminal() {
         </div>
       </section>
 
-      <button onClick={() => setOrderOpen(true)} className="fixed inset-x-4 bottom-20 z-10 flex h-12 items-center justify-between rounded-xl bg-pos-brand px-4 text-xs font-semibold text-white shadow-lg md:hidden">
+      <button onClick={() => setOrderOpen(true)} className="fixed inset-x-4 bottom-4 z-10 flex h-12 items-center justify-between rounded-xl bg-pos-brand px-4 text-xs font-semibold text-white shadow-lg md:hidden">
         <span>View order · {itemCount} items</span><span>{formatCurrency(priced.total)}</span>
       </button>
 
-      <aside className={`flex w-[min(340px,38vw)] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm max-md:fixed max-md:inset-x-2 max-md:bottom-20 max-md:top-[20vh] max-md:z-20 max-md:w-auto ${orderOpen ? "" : "max-md:hidden"}`}>
+      <aside className={`flex w-[min(340px,38vw)] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:top-[20vh] max-md:z-20 max-md:w-auto ${orderOpen ? "" : "max-md:hidden"}`}>
         <header className="flex h-[60px] shrink-0 items-center justify-between border-b border-pos-line px-4">
           <div><h1 className="text-sm font-bold">Current Sale</h1><p className="text-[10px] text-pos-muted">{user?.name ?? "Guest"} · {itemCount} items</p></div>
           <div className="flex items-center gap-1">

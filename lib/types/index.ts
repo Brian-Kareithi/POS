@@ -340,6 +340,8 @@ export interface Notification {
   type: "info" | "success" | "warning" | "error"
   read: boolean
   link?: string
+  /** Roles that should see this. Leave out for everyone (or use userId to target one person). */
+  roles?: Role[]
   createdAt: string
 }
 
