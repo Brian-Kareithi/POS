@@ -6,6 +6,7 @@ interface CheckoutState {
   sessions: CheckoutSession[]
   createSession: (items: CheckoutSessionItem[], total: number) => CheckoutSession
   getSession: (token: string) => CheckoutSession | undefined
+  restoreSession: (session: CheckoutSession) => void
   completeSession: (token: string) => void
   expireSession: (token: string) => void
   cleanupExpired: () => void
@@ -31,6 +32,10 @@ export const useCheckoutStore = create<CheckoutState>()((set, get) => ({
 
   getSession: (token) => {
     return get().sessions.find((s) => s.token === token)
+  },
+
+  restoreSession: (session) => {
+    set((s) => (s.sessions.some((x) => x.token === session.token) ? s : { sessions: [...s.sessions, session] }))
   },
 
   completeSession: (token) => {

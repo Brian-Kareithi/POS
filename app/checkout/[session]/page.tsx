@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, use, useMemo } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { Suspense, useEffect, useMemo, useState } from "react"
+import { useParams, useSearchParams } from "next/navigation"
 import { useCheckoutStore } from "@/lib/stores/checkout-store"
 import { useDataStore } from "@/lib/stores/data-store"
-import { useCartStore } from "@/lib/stores/cart-store"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
@@ -12,21 +11,98 @@ import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils/format"
 import { generateId, generateOrderNumber } from "@/lib/utils/generators"
 import { PAYMENT_METHODS } from "@/lib/constants"
-import type { PaymentMethod } from "@/lib/types"
-import { QrCode, ShoppingCart, CreditCard, CheckCircle, AlertCircle, Smartphone } from "lucide-react"
+import type { CheckoutSession, CheckoutSessionItem, PaymentMethod } from "@/lib/types"
+import { CreditCard, CheckCircle, AlertCircle, Smartphone } from "lucide-react"
+
+function parsePayload(raw: string | null): Pick<CheckoutSession, "items" | "total" | "expiresAt"> | null {
+  if (!raw) return null
+  try {
+    const data = JSON.parse(raw)
+    if (!Array.isArray(data?.items) || typeof data.total !== "number") return null
+    interface PayloadItem {
+      productId: string
+      name: string
+      quantity: number
+      unitPrice: number
+      tax?: number
+      discount?: number
+      total?: number
+    }
+    const items: CheckoutSessionItem[] = (data.items as PayloadItem[])
+      .filter(
+        (i) =>
+          i &&
+          typeof i.productId === "string" &&
+          typeof i.name === "string" &&
+          typeof i.quantity === "number" &&
+          typeof i.unitPrice === "number"
+      )
+      .map((i) => ({
+        productId: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        tax: typeof i.tax === "number" ? i.tax : 0,
+        discount: typeof i.discount === "number" ? i.discount : 0,
+        total:
+          typeof i.total === "number"
+            ? i.total
+            : i.quantity * i.unitPrice + (typeof i.tax === "number" ? i.tax : 0) - (typeof i.discount === "number" ? i.discount : 0),
+      }))
+    if (items.length === 0) return null
+    const expiresAt =
+      typeof data.expiresAt === "string" && !Number.isNaN(Date.parse(data.expiresAt))
+        ? data.expiresAt
+        : "2000-01-01T00:00:00.000Z"
+    return { items, total: items.reduce((sum: number, i) => sum + i.total, 0), expiresAt }
+  } catch {
+    return null
+  }
+}
 
 export default function CheckoutPage() {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutPageInner />
+    </Suspense>
+  )
+}
+
+function CheckoutPageInner() {
   const params = useParams()
-  const router = useRouter()
-  const session = useCheckoutStore((s) => s.getSession(params.session as string))
+  const searchParams = useSearchParams()
+  const token = params.session as string
+  const storedSession = useCheckoutStore((s) => s.getSession(token))
   const completeSession = useCheckoutStore((s) => s.completeSession)
   const addSale = useDataStore((s) => s.addSale)
-  const products = useDataStore((s) => s.products)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mobile_money")
   const [processing, setProcessing] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [error, setError] = useState("")
-  const [now] = useState(() => Date.now())
+  const [now, setNow] = useState(() => Date.now())
+
+  const restoredSession = useMemo<CheckoutSession | null>(() => {
+    if (storedSession) return null
+    const payload = parsePayload(searchParams.get("payload"))
+    if (!payload) return null
+    return {
+      id: token,
+      saleId: "",
+      token,
+      items: payload.items,
+      total: payload.total,
+      status: "pending",
+      expiresAt: payload.expiresAt,
+      createdAt: payload.expiresAt,
+    }
+  }, [storedSession, searchParams, token])
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const session = storedSession || restoredSession
 
   if (!session) {
     return (
@@ -87,44 +163,51 @@ export default function CheckoutPage() {
     )
   }
 
+  const subtotal = session.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
+  const taxTotal = session.items.reduce((sum, i) => sum + i.tax, 0)
+  const discountTotal = session.items.reduce((sum, i) => sum + i.discount, 0)
+
   const handlePay = async () => {
     setProcessing(true)
     setError("")
     await new Promise((r) => setTimeout(r, 2000))
-    const success = Math.random() > 0.1
-    if (success) {
-      const products_list = useDataStore.getState().products
-      addSale({
+    addSale({
+      id: generateId(),
+      businessId: "",
+      branchId: "",
+      userId: "",
+      orderNumber: generateOrderNumber(),
+      receiptNumber: `RCP-QR-${Math.floor(Math.random() * 90000 + 10000)}`,
+      synced: true,
+      status: "completed",
+      subtotal,
+      taxTotal,
+      discountTotal,
+      total: subtotal + taxTotal - discountTotal,
+      paidAmount: subtotal + taxTotal - discountTotal,
+      changeAmount: 0,
+      paymentMethod,
+      items: session.items.map((i) => ({
         id: generateId(),
-        businessId: "",
-        branchId: "",
-        userId: "",
-        orderNumber: generateOrderNumber(),
-        status: "completed",
-        subtotal: session.total * 0.84,
-        taxTotal: session.total * 0.08,
-        discountTotal: session.total * 0.08,
-        total: session.total,
-        paidAmount: session.total,
-        changeAmount: 0,
-        paymentMethod,
-        items: session.items.map((i) => ({
-          id: generateId(), saleId: "", productId: i.productId,
-          quantity: i.quantity, unitPrice: i.unitPrice, discount: 0, tax: i.total * 0.08, total: i.total,
-        })),
-        payments: [{ id: generateId(), saleId: "", method: paymentMethod, amount: session.total, status: "completed" as const, createdAt: new Date().toISOString() }],
-        createdAt: new Date().toISOString(),
-      })
-      useDataStore.getState().addNotification({
-        id: generateId(), userId: "", title: "New Payment Received",
-        message: `Payment of ${formatCurrency(session.total)} via ${paymentMethod.replace("_", " ")} completed.`,
-        type: "success", read: false, createdAt: new Date().toISOString(),
-      })
-      completeSession(session.token)
-      setCompleted(true)
-    } else {
-      setError("Payment failed. Please try again.")
-    }
+        saleId: "",
+        productId: i.productId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        discount: i.discount,
+        tax: i.tax,
+        total: i.total,
+      })),
+      payments: [{ id: generateId(), saleId: "", method: paymentMethod, amount: subtotal + taxTotal - discountTotal, status: "completed" as const, createdAt: new Date().toISOString() }],
+      createdAt: new Date().toISOString(),
+    })
+    session.items.forEach((i) => useDataStore.getState().adjustStock(i.productId, -i.quantity))
+    useDataStore.getState().addNotification({
+      id: generateId(), userId: "", title: "New Payment Received",
+      message: `Payment of ${formatCurrency(subtotal + taxTotal - discountTotal)} via ${paymentMethod.replace("_", " ")} completed.`,
+      type: "success", read: false, createdAt: new Date().toISOString(),
+    })
+    completeSession(session.token)
+    setCompleted(true)
     setProcessing(false)
   }
 
@@ -158,9 +241,23 @@ export default function CheckoutPage() {
 
         <Card>
           <CardContent className="p-4">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-500">Subtotal</span>
+              <span className="text-gray-900">{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-500">Tax</span>
+              <span className="text-gray-900">{formatCurrency(taxTotal)}</span>
+            </div>
+            {discountTotal > 0 && (
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-500">Discount</span>
+                <span className="text-red-600">-{formatCurrency(discountTotal)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-bold mb-4">
               <span className="text-gray-900">Total</span>
-              <span className="text-gray-900">{formatCurrency(session.total)}</span>
+              <span className="text-gray-900">{formatCurrency(subtotal + taxTotal - discountTotal)}</span>
             </div>
 
             <div className="space-y-3">
@@ -183,7 +280,7 @@ export default function CheckoutPage() {
               )}
               <Button className="w-full" size="lg" onClick={handlePay} isLoading={processing}>
                 <CreditCard className="h-5 w-5" />
-                Pay {formatCurrency(session.total)}
+                Pay {formatCurrency(subtotal + taxTotal - discountTotal)}
               </Button>
             </div>
           </CardContent>

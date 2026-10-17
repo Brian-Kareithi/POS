@@ -9,6 +9,7 @@ export interface CartItem {
   sku: string
   quantity: number
   unitPrice: number
+  taxRate: number
   discount: number
   tax: number
   total: number
@@ -40,7 +41,7 @@ interface CartState {
   getDiscountTotal: () => number
   getTotal: () => number
   getItemCount: () => number
-  getCheckoutItems: () => { productId: string; name: string; quantity: number; unitPrice: number; total: number }[]
+  getCheckoutItems: () => { productId: string; name: string; quantity: number; unitPrice: number; tax: number; discount: number; total: number }[]
 }
 
 export const useCartStore = create<CartState>()(
@@ -55,13 +56,16 @@ export const useCartStore = create<CartState>()(
         set((state) => {
           const existing = state.items.find((i) => i.productId === product.id)
           if (existing) {
+            const newQuantity = existing.quantity + quantity
+            const newTax = (newQuantity * existing.unitPrice * existing.taxRate) / 100
             return {
               items: state.items.map((i) =>
                 i.productId === product.id
                   ? {
                       ...i,
-                      quantity: i.quantity + quantity,
-                      total: (i.quantity + quantity) * i.unitPrice - i.discount,
+                      quantity: newQuantity,
+                      tax: newTax,
+                      total: newQuantity * existing.unitPrice + newTax - i.discount,
                     }
                   : i
               ),
@@ -75,6 +79,7 @@ export const useCartStore = create<CartState>()(
             sku: product.sku,
             quantity,
             unitPrice: product.sellingPrice,
+            taxRate: product.taxRate,
             discount: 0,
             tax: taxAmount,
             total: product.sellingPrice * quantity + taxAmount,
@@ -91,18 +96,18 @@ export const useCartStore = create<CartState>()(
 
       updateQuantity: (id, quantity) =>
         set((state) => ({
-          items: state.items.map((i) =>
-            i.id === id
-              ? {
-                  ...i,
-                  quantity: Math.max(1, quantity),
-                  total:
-                    Math.max(1, quantity) * i.unitPrice -
-                    i.discount +
-                    (Math.max(1, quantity) * i.unitPrice * i.tax) / (i.unitPrice * i.quantity || 1),
-                }
-              : i
-          ),
+          items: state.items.map((i) => {
+            if (i.id !== id) return i
+            const nextQuantity = Math.max(1, quantity)
+            if (i.quantity === nextQuantity) return i
+            const newTax = (nextQuantity * i.unitPrice * i.taxRate) / 100
+            return {
+              ...i,
+              quantity: nextQuantity,
+              tax: newTax,
+              total: nextQuantity * i.unitPrice + newTax - i.discount,
+            }
+          }),
         })),
 
       updateDiscount: (id, discount) =>
@@ -171,12 +176,48 @@ export const useCartStore = create<CartState>()(
           name: i.name,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
+          tax: i.tax,
+          discount: i.discount,
           total: i.total,
         }))
       },
     }),
     {
       name: "pos-cart",
+      version: 1,
+      migrate: (persistedState, version) => {
+        type LegacyItem = Omit<CartItem, "taxRate"> & { taxRate?: number }
+        type Persisted = {
+          items?: LegacyItem[]
+          customerId?: string
+          customerName?: string
+          notes?: string
+          paymentMethod?: PaymentMethod
+          couponCode?: string
+          couponDiscount?: number
+        }
+        const state = (persistedState ?? {}) as Persisted
+        const needsMigration =
+          version < 1 || !Array.isArray(state.items) || state.items.some((i) => typeof i.taxRate !== "number")
+        if (!needsMigration) return state
+        const items = (state.items || []).map((i) => {
+          const oldTax = i.tax || 0
+          const taxRate =
+            typeof i.taxRate === "number"
+              ? i.taxRate
+              : i.quantity > 0 && i.unitPrice > 0
+                ? Math.round((oldTax / (i.unitPrice * i.quantity)) * 10000) / 100
+                : 0
+          const tax = Math.round(i.quantity * i.unitPrice * taxRate) / 100
+          return {
+            ...i,
+            taxRate,
+            tax,
+            total: i.quantity * i.unitPrice + tax - (i.discount || 0),
+          }
+        })
+        return { ...state, items }
+      },
       partialize: (state) => ({
         items: state.items,
         customerId: state.customerId,

@@ -4,6 +4,8 @@ import { useState } from "react"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { useNotificationStore } from "@/lib/stores/notification-store"
+import { BranchSwitcher, ConnectionStatus } from "@/components/layout/nav-status"
+import { ROLE_LABELS, can } from "@/lib/permissions"
 import { SearchInput } from "@/components/ui/search-input"
 import { cn } from "@/lib/utils/cn"
 import {
@@ -27,7 +29,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 gap-4">
+    <header className="relative h-14 shrink-0 bg-white shadow-sm lg:rounded-xl flex items-center justify-between px-4 lg:px-5 gap-4">
       <div className="flex items-center gap-3">
         <button
           onClick={toggleSidebar}
@@ -49,19 +51,21 @@ export function Navbar() {
       </div>
 
       {showSearch && (
-        <div className="absolute top-16 left-0 right-0 p-4 bg-white border-b border-gray-200 md:hidden z-30">
+        <div className="absolute top-14 left-0 right-0 p-4 bg-white border-b border-gray-200 md:hidden z-30">
           <SearchInput placeholder="Search..." autoFocus />
         </div>
       )}
 
       <div className="flex items-center gap-2">
-        <Link
+        <BranchSwitcher />
+        <ConnectionStatus />
+        {can(user?.role, "pos.sell") && <Link
           href="/sales/new"
           className="flex items-center gap-2 rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700"
         >
           <ShoppingCart className="h-4 w-4" />
           <span className="hidden sm:inline">New Sale</span>
-        </Link>
+        </Link>}
 
         <button
           onClick={toggleTheme}
@@ -102,7 +106,7 @@ export function Navbar() {
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
-                  <p className="text-xs text-gray-400 capitalize mt-0.5">{user?.role?.replace("_", " ")}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{user ? ROLE_LABELS[user.role] : ""}</p>
                 </div>
                 <Link
                   href="/settings"

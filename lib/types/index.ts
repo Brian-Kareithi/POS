@@ -13,7 +13,7 @@ export interface User {
   updatedAt: string
 }
 
-export type Role = "owner" | "sales_person"
+export type Role = "owner" | "manager" | "cashier" | "stockkeeper"
 
 export interface Business {
   id: string
@@ -102,6 +102,11 @@ export interface Product {
   isActive: boolean
   hasVariants: boolean
   image?: string
+  stock?: number
+  /** Units on hand per branch id. Their sum is `stock`. */
+  branchStock?: Record<string, number>
+  expiryDate?: string
+  batchNumber?: string
   category?: Category
   brand?: Brand
   supplier?: Supplier
@@ -140,6 +145,8 @@ export interface StockTransfer {
   businessId: string
   fromWarehouseId: string
   toWarehouseId: string
+  fromBranchId?: string
+  toBranchId?: string
   productId: string
   quantity: number
   status: "pending" | "approved" | "completed" | "cancelled"
@@ -186,6 +193,10 @@ export interface Customer {
   groupId?: string
   loyaltyPoints: number
   storeCredit: number
+  creditLimit?: number
+  amountOwed?: number
+  creditDueDate?: string
+  marketingConsent?: boolean
   notes?: string
   birthday?: string
   isActive: boolean
@@ -217,6 +228,19 @@ export interface Sale {
   changeAmount: number
   paymentMethod: PaymentMethod
   notes?: string
+  amountDue?: number
+  dueDate?: string
+  shiftId?: string
+  receiptNumber?: string
+  idempotencyKey?: string
+  reference?: string
+  voidReason?: string
+  refundReason?: string
+  approvedBy?: string
+  synced?: boolean
+  loyaltyEarned?: number
+  loyaltyRedeemed?: number
+  couponCode?: string
   items?: SaleItem[]
   payments?: Payment[]
   customer?: Customer
@@ -234,6 +258,7 @@ export interface SaleItem {
   discount: number
   tax: number
   total: number
+  unitCost?: number
   product?: Product
 }
 
@@ -247,7 +272,7 @@ export interface Payment {
   createdAt: string
 }
 
-export type PaymentMethod = "cash" | "card" | "bank_transfer" | "mobile_money"
+export type PaymentMethod = "cash" | "card" | "bank_transfer" | "mobile_money" | "credit"
 
 export interface Coupon {
   id: string
@@ -371,5 +396,57 @@ export interface CheckoutSessionItem {
   name: string
   quantity: number
   unitPrice: number
+  tax: number
+  discount: number
   total: number
+}
+
+export interface StockAdjustment {
+  id: string
+  productId: string
+  productName: string
+  sku: string
+  change: number
+  reason: string
+  userName: string
+  createdAt: string
+}
+
+export interface AuditLog {
+  id: string
+  userId: string
+  userName: string
+  role: Role | "system"
+  action: string
+  entity: string
+  detail: string
+  severity: "info" | "warning" | "critical"
+  createdAt: string
+}
+
+export interface ShiftRecord {
+  id: string
+  userId: string
+  userName: string
+  branchId: string
+  openedAt: string
+  closedAt?: string
+  openingCash: number
+  expectedCash?: number
+  countedCash?: number
+  variance?: number
+  notes?: string
+}
+
+export interface Promotion {
+  id: string
+  code: string
+  name: string
+  type: "percent" | "fixed" | "bogo"
+  value: number
+  productId?: string
+  startsAt: string
+  endsAt: string
+  isActive: boolean
+  uses: number
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useCartStore } from "@/lib/stores/cart-store"
 import { useDataStore } from "@/lib/stores/data-store"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +10,6 @@ import { Scan, Search, Plus } from "lucide-react"
 import Link from "next/link"
 
 export default function ScanPage() {
-  const router = useRouter()
   const { products } = useDataStore()
   const addItem = useCartStore((s) => s.addItem)
   const [barcode, setBarcode] = useState("")

@@ -35,6 +35,10 @@ const labelMap: Record<string, string> = {
   "backups": "Backups",
   "api-keys": "API Keys",
   "notifications": "Notifications",
+  "audit": "Audit Log",
+  "insights": "Insights",
+  "promotions": "Promotions",
+  "overview": "Dashboard",
 }
 
 export function Breadcrumbs() {

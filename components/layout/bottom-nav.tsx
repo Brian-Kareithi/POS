@@ -4,28 +4,22 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils/cn"
-import {
-  LayoutDashboard, Package, ShoppingCart, Users, Settings
-} from "lucide-react"
+import { navFor, activeHref } from "@/lib/navigation"
 
-const allItems = [
-  { href: "/", label: "Home", icon: LayoutDashboard, roles: ["owner"] },
-  { href: "/products", label: "Products", icon: Package, roles: ["owner", "sales_person"] },
-  { href: "/sales/new", label: "Sell", icon: ShoppingCart, roles: ["owner", "sales_person"] },
-  { href: "/customers", label: "Customers", icon: Users, roles: ["owner"] },
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["owner"] },
-]
+const PRIMARY = ["/", "/overview", "/products", "/inventory", "/sales", "/customers"]
 
 export function BottomNav() {
   const pathname = usePathname()
   const user = useAuthStore((s) => s.user)
-  const items = allItems.filter((item) => item.roles.includes(user?.role || "sales_person"))
+  const all = navFor(user?.role)
+  const items = all.filter((i) => PRIMARY.includes(i.href)).slice(0, 5)
+  const current = activeHref(pathname, all)
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 lg:hidden">
       <div className="flex items-center justify-around h-16">
         {items.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+          const isActive = item.href === current
           return (
             <Link
               key={item.href}

@@ -4,28 +4,38 @@ import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { useDataStore } from "@/lib/stores/data-store"
+import { useAuthStore } from "@/lib/stores/auth-store"
+import { can } from "@/lib/permissions"
+import { refundSale } from "@/lib/services/checkout"
+import { notify } from "@/lib/toast"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Dialog } from "@/components/ui/dialog"
 import { EmptyState } from "@/components/ui/empty-state"
+import { ApprovalDialog } from "@/components/pos/approval-dialog"
+import { ReceiptDialog } from "@/components/pos/receipt-dialog"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { generateId } from "@/lib/utils/generators"
-import { ArrowLeft, Printer, RefreshCw, ShoppingCart, Receipt, User, CreditCard } from "lucide-react"
+import { ArrowLeft, Printer, RefreshCw, ShoppingCart, Receipt, User, CreditCard, Ban, WifiOff } from "lucide-react"
+
+const refundReasons = ["Damaged item", "Wrong item", "Customer changed mind", "Expired product", "Pricing error"]
+const voidReasons = ["Wrong item scanned", "Duplicate sale", "Customer left without paying", "Cashier error"]
+const methodLabel: Record<string, string> = { cash: "Cash", card: "Card", mobile_money: "M-Pesa", bank_transfer: "Bank transfer", credit: "On account" }
 
 export default function SaleDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { sales, customers, products, updateSale, addNotification } = useDataStore()
-  const [showRefund, setShowRefund] = useState(false)
+  const { sales, customers, products, users, branches } = useDataStore()
+  const user = useAuthStore((s) => s.user)
+  const [action, setAction] = useState<"refund" | "void" | null>(null)
+  const [reprint, setReprint] = useState(false)
 
   const sale = sales.find((s) => s.id === params.id)
   const customer = customers.find((c) => c.id === sale?.customerId)
-
-  const getProductName = (productId: string) =>
-    products.find((p) => p.id === productId)?.name || "Item"
+  const cashier = users.find((u) => u.id === sale?.userId)
+  const branch = branches.find((b) => b.id === sale?.branchId)
+  const getProductName = (productId: string) => products.find((p) => p.id === productId)?.name || "Item"
 
   if (!sale) {
     return (
@@ -42,39 +52,48 @@ export default function SaleDetailPage() {
     )
   }
 
-  const handleRefund = () => {
-    updateSale(sale.id, { status: "refunded" })
-    addNotification({
-      id: generateId(),
-      userId: "",
-      title: "Sale Refunded",
-      message: `Sale ${sale.orderNumber} for ${formatCurrency(sale.total)} was refunded.`,
-      type: "warning",
-      read: false,
-      createdAt: new Date().toISOString(),
-    })
-    setShowRefund(false)
+  const needsApproval = !can(user?.role, "refund.issue")
+  const confirm = ({ reason, approvedBy }: { reason: string; approvedBy?: string }) => {
+    try {
+      refundSale(sale.id, action ?? "refund", reason, approvedBy)
+    } catch (error) {
+      notify.error("Couldn't complete that", error instanceof Error ? error.message : undefined)
+    }
+    setAction(null)
   }
 
-  const statusVariant = sale.status === "completed" ? "success" : sale.status === "refunded" ? "danger" : "default"
+  const statusVariant = sale.status === "completed" ? "success" : sale.status === "refunded" || sale.status === "cancelled" ? "danger" : "default"
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`Sale ${sale.orderNumber}`} description={`Placed on ${formatDateTime(sale.createdAt)}`}>
-        <Link href="/sales/new"><Button><ShoppingCart className="h-4 w-4" />New Sale</Button></Link>
-        <Button variant="secondary" onClick={() => window.print()}><Printer className="h-4 w-4" />Print Receipt</Button>
+      <PageHeader title={`Sale ${sale.receiptNumber ?? sale.orderNumber}`} description={`Placed on ${formatDateTime(sale.createdAt)}`}>
+        {can(user?.role, "pos.sell") && <Link href="/"><Button><ShoppingCart className="h-4 w-4" />New Sale</Button></Link>}
+        <Button variant="secondary" onClick={() => setReprint(true)}><Printer className="h-4 w-4" />Reprint receipt</Button>
         {sale.status === "completed" && (
-          <Button variant="danger" onClick={() => setShowRefund(true)}><RefreshCw className="h-4 w-4" />Refund</Button>
+          <>
+            <Button variant="secondary" onClick={() => setAction("void")}><Ban className="h-4 w-4" />Void</Button>
+            <Button variant="danger" onClick={() => setAction("refund")}><RefreshCw className="h-4 w-4" />Refund</Button>
+          </>
         )}
         <Button variant="secondary" onClick={() => router.push("/sales")}><ArrowLeft className="h-4 w-4" />Back</Button>
       </PageHeader>
 
+      {sale.synced === false && (
+        <p className="flex items-center gap-2 rounded-lg bg-orange-50 px-4 py-3 text-sm text-orange-700"><WifiOff className="h-4 w-4" />This sale was made offline and is waiting to sync.</p>
+      )}
+      {(sale.refundReason || sale.voidReason) && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {sale.status === "cancelled" ? "Voided" : "Refunded"}: {sale.refundReason ?? sale.voidReason}{sale.approvedBy ? ` · approved by ${sale.approvedBy}` : ""}
+        </p>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardContent className="py-4 space-y-2">
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2"><Receipt className="h-4 w-4 text-gray-400" />Order Details</p>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Order #</span><span className="font-medium">{sale.orderNumber}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-gray-500">Receipt</span><span className="font-medium">{sale.receiptNumber ?? sale.orderNumber}</span></div>
           <div className="flex justify-between text-sm"><span className="text-gray-500">Status</span><Badge variant={statusVariant}>{sale.status}</Badge></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Date</span><span>{formatDateTime(sale.createdAt)}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-gray-500">Served by</span><span>{cashier?.name ?? "—"}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-gray-500">Branch</span><span>{branch?.name ?? "—"}</span></div>
         </CardContent></Card>
         <Card><CardContent className="py-4 space-y-2">
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2"><User className="h-4 w-4 text-gray-400" />Customer</p>
@@ -85,18 +104,16 @@ export default function SaleDetailPage() {
           ) : (
             <div className="flex justify-between text-sm"><span className="text-gray-500">Name</span><span className="font-medium">Walk-in Customer</span></div>
           )}
-          {customer && (
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Email</span><span>{customer.email}</span></div>
-          )}
-          {customer && (
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Points</span><span>{customer.loyaltyPoints}</span></div>
-          )}
+          {customer && <div className="flex justify-between text-sm"><span className="text-gray-500">Phone</span><span>{customer.phone}</span></div>}
+          {customer && <div className="flex justify-between text-sm"><span className="text-gray-500">Points</span><span>{customer.loyaltyPoints.toLocaleString()}{sale.loyaltyEarned ? ` (+${sale.loyaltyEarned} this sale)` : ""}</span></div>}
         </CardContent></Card>
         <Card><CardContent className="py-4 space-y-2">
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2"><CreditCard className="h-4 w-4 text-gray-400" />Payment</p>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Method</span><span className="capitalize font-medium">{sale.paymentMethod.replace("_", " ")}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Paid</span><span className="font-medium">{formatCurrency(sale.paidAmount)}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Change</span><span>{formatCurrency(sale.changeAmount)}</span></div>
+          {sale.payments?.map((p) => (
+            <div key={p.id} className="flex justify-between text-sm"><span className="text-gray-500">{methodLabel[p.method]}{p.reference ? ` · ${p.reference}` : ""}</span><span className="font-medium">{formatCurrency(p.amount)}</span></div>
+          ))}
+          {sale.changeAmount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Change given</span><span>{formatCurrency(sale.changeAmount)}</span></div>}
+          {sale.amountDue ? <div className="flex justify-between text-sm"><span className="text-orange-600">Balance on account</span><span className="font-medium text-orange-600">{formatCurrency(sale.amountDue)}</span></div> : null}
         </CardContent></Card>
       </div>
 
@@ -127,21 +144,23 @@ export default function SaleDetailPage() {
       <Card className="max-w-md ml-auto">
         <CardContent className="py-4 space-y-2">
           <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(sale.subtotal)}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Tax</span><span>{formatCurrency(sale.taxTotal)}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Discount</span><span className="text-red-600">-{formatCurrency(sale.discountTotal)}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-gray-500">VAT included</span><span>{formatCurrency(sale.taxTotal)}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-gray-500">Discount{sale.couponCode ? ` (${sale.couponCode})` : ""}</span><span className="text-red-600">-{formatCurrency(sale.discountTotal)}</span></div>
           <div className="border-t border-gray-200 pt-2 flex justify-between text-lg font-bold"><span>Total</span><span>{formatCurrency(sale.total)}</span></div>
         </CardContent>
       </Card>
 
-      <Dialog open={showRefund} onClose={() => setShowRefund(false)} title="Refund Sale" size="sm">
-        <p className="text-sm text-gray-600 mb-4">
-          Refund sale <span className="font-medium">{sale.orderNumber}</span> for <span className="font-medium">{formatCurrency(sale.total)}</span>? The sale will be marked as refunded.
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={() => setShowRefund(false)}>Cancel</Button>
-          <Button variant="danger" onClick={handleRefund}>Confirm Refund</Button>
-        </div>
-      </Dialog>
+      <ApprovalDialog
+        open={action !== null}
+        title={action === "void" ? "Void sale" : "Refund sale"}
+        description={`${sale.receiptNumber ?? sale.orderNumber} · ${formatCurrency(sale.total)}. Stock goes back on the shelf and the action is written to the audit log.`}
+        reasons={action === "void" ? voidReasons : refundReasons}
+        needsApproval={needsApproval}
+        confirmLabel={action === "void" ? "Void sale" : "Confirm refund"}
+        onClose={() => setAction(null)}
+        onConfirm={confirm}
+      />
+      <ReceiptDialog sale={reprint ? sale : null} reprint onClose={() => setReprint(false)} />
     </div>
   )
 }

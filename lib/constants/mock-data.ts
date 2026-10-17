@@ -1,37 +1,47 @@
 import { generateId, generateSKU, generateBarcode, generateOrderNumber } from "../utils/generators"
 import type { Business, Branch, Warehouse, Category, Brand, Supplier, Product, Customer, CustomerGroup, Employee, User } from "../types"
 
-const businessId = generateId()
-const ownerId = generateId()
-const branchId = generateId()
-const warehouseId = generateId()
+// Fixed ids for people, branches and the business so saved data still lines up after a reload.
+const businessId = "biz_jamii"
+const ownerId = "usr_owner"
+const branchId = "br_westlands"
+export const eastleighBranchId = "br_eastleigh"
+const warehouseId = "wh_main"
 
 export const mockBusiness: Business = {
   id: businessId,
-  name: "Main Street Retail",
-  slug: "main-street-retail",
-  email: "info@mainstreetretail.com",
+  name: "Jamii Retail",
+  slug: "jamii-retail",
+  email: "info@jamiiretail.co.ke",
   phone: "+254 712 345 678",
-  address: "123 Main Street, Nairobi, Kenya",
+  address: "Mpaka Road, Westlands, Nairobi, Kenya",
   currency: "KES",
   timezone: "Africa/Nairobi",
   createdAt: "2025-01-15T08:00:00Z",
 }
 
+const stamp = "2025-02-01T08:00:00Z"
+const user = (email: string, name: string, role: User["role"], phone: string, branch: string): User => ({
+  id: role === "owner" ? ownerId : `usr_${email}`, email: `${email}@jamiiretail.co.ke`, name, role, businessId, branchId: branch,
+  emailVerified: true, twoFactorEnabled: role === "owner", phone, createdAt: stamp, updatedAt: stamp,
+})
+
 export const mockUsers: User[] = [
-  { id: ownerId, email: "owner@mainstreetretail.com", name: "John Smith", role: "owner", businessId, branchId, emailVerified: true, twoFactorEnabled: false, phone: "+254 712 111 111", createdAt: "2025-01-15T08:00:00Z", updatedAt: "2025-01-15T08:00:00Z" },
-  { id: generateId(), email: "sales1@mainstreetretail.com", name: "Sarah Johnson", role: "sales_person", businessId, branchId, emailVerified: true, twoFactorEnabled: false, phone: "+254 712 222 222", createdAt: "2025-02-01T08:00:00Z", updatedAt: "2025-02-01T08:00:00Z" },
-  { id: generateId(), email: "sales2@mainstreetretail.com", name: "Mike Brown", role: "sales_person", businessId, branchId, emailVerified: true, twoFactorEnabled: false, phone: "+254 712 333 333", createdAt: "2025-03-01T08:00:00Z", updatedAt: "2025-03-01T08:00:00Z" },
+  user("owner", "Kamau Mwangi", "owner", "+254 712 111 111", branchId),
+  user("manager", "Atieno Ouma", "manager", "+254 722 444 101", branchId),
+  user("cashier1", "Wanjiru Njoroge", "cashier", "+254 712 222 222", branchId),
+  user("cashier2", "Otieno Odhiambo", "cashier", "+254 712 333 333", eastleighBranchId),
+  user("stock", "Barasa Wekesa", "stockkeeper", "+254 733 555 202", branchId),
 ]
 
 export const mockBranches: Branch[] = [
-  { id: branchId, businessId, name: "Main Street Store", address: "123 Main Street, Nairobi", phone: "+254 712 345 678", email: "mainstore@mainstreetretail.com", managerId: mockUsers[0].id, isActive: true, createdAt: "2025-01-15T08:00:00Z" },
-  { id: generateId(), businessId, name: "Downtown Branch", address: "456 Kenyatta Ave, Nairobi", phone: "+254 723 456 789", email: "downtown@mainstreetretail.com", isActive: true, createdAt: "2025-03-01T08:00:00Z" },
+  { id: branchId, businessId, name: "Westlands Store", address: "Mpaka Road, Westlands, Nairobi", phone: "+254 712 345 678", email: "mainstore@jamiiretail.co.ke", managerId: mockUsers[0].id, isActive: true, createdAt: "2025-01-15T08:00:00Z" },
+  { id: eastleighBranchId, businessId, name: "Eastleigh Branch", address: "Tenth Street, Eastleigh, Nairobi", phone: "+254 723 456 789", email: "downtown@jamiiretail.co.ke", isActive: true, createdAt: "2025-03-01T08:00:00Z" },
 ]
 
 export const mockWarehouses: Warehouse[] = [
   { id: warehouseId, businessId, name: "Main Warehouse", address: "789 Industrial Area, Nairobi", isActive: true, createdAt: "2025-01-15T08:00:00Z" },
-  { id: generateId(), businessId, branchId: branchId, name: "Store Backroom", address: "123 Main Street, Nairobi", isActive: true, createdAt: "2025-01-15T08:00:00Z" },
+  { id: generateId(), businessId, branchId: branchId, name: "Store Backroom", address: "Mpaka Road, Westlands, Nairobi", isActive: true, createdAt: "2025-01-15T08:00:00Z" },
 ]
 
 export const mockCategories: Category[] = [
@@ -52,9 +62,9 @@ export const mockBrands: Brand[] = [
 ]
 
 export const mockSuppliers: Supplier[] = [
-  { id: generateId(), businessId, name: "Global Distributors Ltd", contactPerson: "Robert Green", email: "robert@globaldist.co.ke", phone: "+254 733 111 111", address: "100 Industrial Area, Nairobi", isActive: true, createdAt: "2025-01-15T08:00:00Z" },
-  { id: generateId(), businessId, name: "Fresh Foods Supply", contactPerson: "Anna White", email: "anna@freshfoods.co.ke", phone: "+254 722 222 222", address: "200 Farmers Market, Nairobi", isActive: true, createdAt: "2025-01-15T08:00:00Z" },
-  { id: generateId(), businessId, name: "TechWorld Wholesale", contactPerson: "David Black", email: "david@techworld.co.ke", phone: "+254 711 333 333", address: "300 Tech Park, Nairobi", isActive: true, createdAt: "2025-02-01T08:00:00Z" },
+  { id: generateId(), businessId, name: "Savanna Distributors Ltd", contactPerson: "Peter Kiprono", email: "peter@savannadist.co.ke", phone: "+254 733 111 111", address: "100 Industrial Area, Nairobi", isActive: true, createdAt: "2025-01-15T08:00:00Z" },
+  { id: generateId(), businessId, name: "Mama Mboga Fresh Supplies", contactPerson: "Grace Wafula", email: "grace@mamamboga.co.ke", phone: "+254 722 222 222", address: "200 Farmers Market, Nairobi", isActive: true, createdAt: "2025-01-15T08:00:00Z" },
+  { id: generateId(), businessId, name: "Nairobi Tech Wholesale", contactPerson: "Hassan Abdi", email: "hassan@nairobitech.co.ke", phone: "+254 711 333 333", address: "300 Tech Park, Nairobi", isActive: true, createdAt: "2025-02-01T08:00:00Z" },
 ]
 
 const beverageCat = mockCategories[0]
@@ -85,15 +95,30 @@ export const mockCustomerGroups: CustomerGroup[] = [
 ]
 
 export const mockCustomers: Customer[] = [
-  { id: generateId(), businessId, name: "Alice Johnson", email: "alice@email.com", phone: "+254 744 111 111", address: "10 Oak Street, Nairobi", groupId: mockCustomerGroups[1].id, loyaltyPoints: 1250, storeCredit: 5000, birthday: "1990-05-15", isActive: true, createdAt: "2025-02-01T08:00:00Z" },
-  { id: generateId(), businessId, name: "Bob Williams", email: "bob@email.com", phone: "+254 722 222 222", address: "20 Pine Road, Nairobi", groupId: mockCustomerGroups[0].id, loyaltyPoints: 450, storeCredit: 0, birthday: "1985-11-20", isActive: true, createdAt: "2025-02-15T08:00:00Z" },
-  { id: generateId(), businessId, name: "Carol Martinez", email: "carol@email.com", phone: "+254 733 333 333", address: "30 Elm Street, Nairobi", groupId: mockCustomerGroups[2].id, loyaltyPoints: 3200, storeCredit: 12000, birthday: "1992-03-08", isActive: true, createdAt: "2025-03-01T08:00:00Z" },
-  { id: generateId(), businessId, name: "David Lee", email: "david@email.com", phone: "+254 711 444 444", address: "40 Maple Ave, Nairobi", groupId: mockCustomerGroups[0].id, loyaltyPoints: 200, storeCredit: 0, birthday: "1988-07-22", isActive: true, createdAt: "2025-03-15T08:00:00Z" },
-  { id: generateId(), businessId, name: "Emma Taylor", email: "emma@email.com", phone: "+254 745 555 555", address: "50 Cedar Lane, Nairobi", groupId: mockCustomerGroups[1].id, loyaltyPoints: 890, storeCredit: 2500, birthday: "1995-09-12", isActive: true, createdAt: "2025-04-01T08:00:00Z" },
+  { id: generateId(), businessId, name: "Akinyi Achieng", email: "akinyi@email.com", phone: "+254 744 111 111", address: "Kilimani Road 10, Nairobi", groupId: mockCustomerGroups[1].id, loyaltyPoints: 1250, storeCredit: 5000, birthday: "1990-05-15", isActive: true, createdAt: "2025-02-01T08:00:00Z" },
+  { id: generateId(), businessId, name: "Kipchoge Rotich", email: "kipchoge@email.com", phone: "+254 722 222 222", address: "Lang'ata Road 20, Nairobi", groupId: mockCustomerGroups[0].id, loyaltyPoints: 450, storeCredit: 0, birthday: "1985-11-20", isActive: true, createdAt: "2025-02-15T08:00:00Z" },
+  { id: generateId(), businessId, name: "Fatuma Hassan", email: "fatuma@email.com", phone: "+254 733 333 333", address: "Nyali Road 30, Nairobi", groupId: mockCustomerGroups[2].id, loyaltyPoints: 3200, storeCredit: 12000, birthday: "1992-03-08", isActive: true, createdAt: "2025-03-01T08:00:00Z" },
+  { id: generateId(), businessId, name: "Mwangi Kariuki", email: "mwangi@email.com", phone: "+254 711 444 444", address: "Thika Road 40, Nairobi", groupId: mockCustomerGroups[0].id, loyaltyPoints: 200, storeCredit: 0, birthday: "1988-07-22", isActive: true, createdAt: "2025-03-15T08:00:00Z" },
+  { id: generateId(), businessId, name: "Njeri Wambui", email: "njeri@email.com", phone: "+254 745 555 555", address: "Karen Road 50, Nairobi", groupId: mockCustomerGroups[1].id, loyaltyPoints: 890, storeCredit: 2500, birthday: "1995-09-12", isActive: true, createdAt: "2025-04-01T08:00:00Z" },
 ]
 
+const emp = (u: User, salary: number | undefined, hireDate: string): Employee => ({
+  id: generateId(), userId: u.id, businessId, branchId: u.branchId, role: u.role, salary, hireDate, isActive: true,
+})
+
 export const mockEmployees: Employee[] = [
-  { id: generateId(), userId: mockUsers[0].id, businessId, branchId, role: "owner", hireDate: "2025-01-15", isActive: true },
-  { id: generateId(), userId: mockUsers[1].id, businessId, branchId, role: "sales_person", salary: 45000, hireDate: "2025-02-01", isActive: true },
-  { id: generateId(), userId: mockUsers[2].id, businessId, branchId, role: "sales_person", salary: 40000, hireDate: "2025-03-01", isActive: true },
+  emp(mockUsers[0], undefined, "2025-01-15"),
+  emp(mockUsers[1], 60000, "2025-01-20"),
+  emp(mockUsers[2], 30000, "2025-02-01"),
+  emp(mockUsers[3], 28000, "2025-03-01"),
+  emp(mockUsers[4], 30000, "2025-02-10"),
 ]
+
+// Perishables get batch numbers and expiry dates (a few are close to expiring so the alerts have something to show).
+const expiryDays = [200, 180, 14, 300, 120, 9, 365, 45, 0, 0, 0, 0]
+mockProducts.forEach((product, i) => {
+  if (expiryDays[i]) {
+    product.expiryDate = new Date(Date.now() + expiryDays[i] * 86400000).toISOString()
+    product.batchNumber = `B${new Date().getFullYear()}-${String(i + 1).padStart(3, "0")}`
+  }
+})

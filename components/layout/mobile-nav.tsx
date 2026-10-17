@@ -5,28 +5,15 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils/cn"
-import {
-  LayoutDashboard, Package, Warehouse, ShoppingCart, Users,
-  UserCog, BookOpen, BarChart3, Settings, X, Menu
-} from "lucide-react"
-
-const allNavItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["owner"] },
-  { href: "/products", label: "Products", icon: Package, roles: ["owner", "sales_person"] },
-  { href: "/inventory", label: "Inventory", icon: Warehouse, roles: ["owner"] },
-  { href: "/sales", label: "Sales", icon: ShoppingCart, roles: ["owner", "sales_person"] },
-  { href: "/customers", label: "Customers", icon: Users, roles: ["owner"] },
-  { href: "/employees", label: "Employees", icon: UserCog, roles: ["owner"] },
-  { href: "/accounting", label: "Accounting", icon: BookOpen, roles: ["owner"] },
-  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["owner"] },
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["owner"] },
-]
+import { X, Menu } from "lucide-react"
+import { navFor, activeHref } from "@/lib/navigation"
 
 export function MobileNav() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const user = useAuthStore((s) => s.user)
-  const navItems = allNavItems.filter((item) => item.roles.includes(user?.role || "sales_person"))
+  const navItems = navFor(user?.role)
+  const current = activeHref(pathname, navItems)
 
   return (
     <>
@@ -52,7 +39,7 @@ export function MobileNav() {
             </div>
             <nav className="px-4 pt-2 space-y-1">
               {navItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+                const isActive = item.href === current
                 return (
                   <Link
                     key={item.href}

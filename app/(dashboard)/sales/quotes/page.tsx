@@ -24,11 +24,12 @@ interface QuoteItemDraft {
   name: string
   quantity: number
   unitPrice: number
+  taxRate: number
 }
 
 export default function SalesQuotesPage() {
   const router = useRouter()
-  const { sales, products, customers, addSale, updateSale, removeSale, addNotification } = useDataStore()
+  const { sales, products, customers, addSale, updateSale, removeSale, addNotification, adjustStock } = useDataStore()
   const [search, setSearch] = useState("")
   const [showNew, setShowNew] = useState(false)
   const [showDelete, setShowDelete] = useState<string | null>(null)
@@ -59,6 +60,7 @@ export default function SalesQuotesPage() {
         name: product.name,
         quantity: qty,
         unitPrice: product.sellingPrice,
+        taxRate: product.taxRate || 0,
       }])
     }
     setSelectedProduct("")
@@ -66,7 +68,7 @@ export default function SalesQuotesPage() {
   }
 
   const quoteSubtotal = quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
-  const quoteTax = quoteSubtotal * 0.16
+  const quoteTax = quoteItems.reduce((sum, i) => sum + ((i.unitPrice * i.quantity * i.taxRate) / 100), 0)
   const quoteTotal = quoteSubtotal + quoteTax
 
   const saveQuote = () => {
@@ -87,16 +89,19 @@ export default function SalesQuotesPage() {
       changeAmount: 0,
       paymentMethod: "cash",
       notes: "Quote awaiting confirmation",
-      items: quoteItems.map((i) => ({
-        id: generateId(),
-        saleId: "",
-        productId: i.productId,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-        discount: 0,
-        tax: i.unitPrice * i.quantity * 0.16,
-        total: i.unitPrice * i.quantity * 1.16,
-      })),
+      items: quoteItems.map((i) => {
+        const tax = (i.unitPrice * i.quantity * i.taxRate) / 100
+        return {
+          id: generateId(),
+          saleId: "",
+          productId: i.productId,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          discount: 0,
+          tax,
+          total: i.unitPrice * i.quantity + tax,
+        }
+      }),
       customer: customers.find((c) => c.id === customerId),
       createdAt: new Date().toISOString(),
     })
@@ -108,7 +113,21 @@ export default function SalesQuotesPage() {
   const convertToSale = (id: string) => {
     const quote = sales.find((s) => s.id === id)
     if (!quote) return
-    updateSale(id, { status: "completed" })
+    quote.items?.forEach((i) => adjustStock(i.productId, -i.quantity))
+    updateSale(id, {
+      receiptNumber: `RCP-Q-${Math.floor(Math.random() * 90000 + 10000)}`,
+      synced: true,
+      status: "completed",
+      paidAmount: quote.total,
+      payments: [{
+        id: generateId(),
+        saleId: id,
+        method: quote.paymentMethod,
+        amount: quote.total,
+        status: "completed" as const,
+        createdAt: new Date().toISOString(),
+      }],
+    })
     addNotification({
       id: generateId(),
       userId: "",
@@ -211,7 +230,7 @@ export default function SalesQuotesPage() {
 
           <div className="space-y-1.5 border-t border-gray-100 pt-3">
             <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(quoteSubtotal)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Tax (16%)</span><span>{formatCurrency(quoteTax)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500">Tax</span><span>{formatCurrency(quoteTax)}</span></div>
             <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{formatCurrency(quoteTotal)}</span></div>
           </div>
 

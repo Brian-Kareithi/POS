@@ -31,7 +31,11 @@ export const useAuthStore = create<AuthState>()(
         try {
           await new Promise((r) => setTimeout(r, 800))
           const { mockUsers } = await import("@/lib/constants/mock-data")
-          const foundUser = mockUsers.find((u) => u.email === email)
+          // Saved staff (including anyone added in Staff settings) come first, then the demo accounts.
+          const { useDataStore } = await import("@/lib/stores/data-store")
+          const saved = useDataStore.getState().users.find((u) => u.email.toLowerCase() === email.toLowerCase())
+          const foundUser = saved ?? mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase())
+          if (foundUser && useDataStore.getState().employees.find((e) => e.userId === foundUser.id)?.isActive === false) throw new Error("This account has been switched off. Ask the owner.")
           if (!foundUser) throw new Error("Invalid credentials")
           set({
             user: foundUser,

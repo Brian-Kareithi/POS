@@ -2,14 +2,17 @@ export const APP_NAME = "This POS System"
 
 export const ROLES = [
   { value: "owner", label: "Owner / Director" },
-  { value: "sales_person", label: "Sales Person" },
+  { value: "manager", label: "Manager" },
+  { value: "cashier", label: "Cashier" },
+  { value: "stockkeeper", label: "Stockkeeper" },
 ] as const
 
 export const PAYMENT_METHODS = [
   { value: "cash", label: "Cash" },
   { value: "card", label: "Card" },
   { value: "bank_transfer", label: "Bank Transfer" },
-  { value: "mobile_money", label: "Mobile Money" },
+  { value: "mobile_money", label: "M-Pesa / Mobile Money" },
+  { value: "credit", label: "Customer Credit" },
 ] as const
 
 export const SALE_STATUSES = [
@@ -68,9 +71,9 @@ export const UNITS = [
 
 export const SIDEBAR_ITEMS = [
   { href: "/", label: "Dashboard", icon: "LayoutDashboard", roles: ["owner"] },
-  { href: "/products", label: "Products", icon: "Package", roles: ["owner", "sales_person"] },
+  { href: "/products", label: "Products", icon: "Package", roles: ["owner", "cashier"] },
   { href: "/inventory", label: "Inventory", icon: "Warehouse", roles: ["owner"] },
-  { href: "/sales", label: "Sales", icon: "ShoppingCart", roles: ["owner", "sales_person"] },
+  { href: "/sales", label: "Sales", icon: "ShoppingCart", roles: ["owner", "cashier"] },
   { href: "/customers", label: "Customers", icon: "Users", roles: ["owner"] },
   { href: "/employees", label: "Employees", icon: "UserCog", roles: ["owner"] },
   { href: "/accounting", label: "Accounting", icon: "BookOpen", roles: ["owner"] },

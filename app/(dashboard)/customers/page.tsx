@@ -68,10 +68,10 @@ export default function CustomersPage() {
 
       <Card><CardContent className="p-0">
         <Table>
-          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Points</TableHead><TableHead>Credit</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Points</TableHead><TableHead>Store credit</TableHead><TableHead>Owes</TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-gray-500">No customers found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">No customers found.</TableCell></TableRow>
             ) : filtered.map((c) => (
               <TableRow key={c.id}>
                 <TableCell><Link href={`/customers/${c.id}`} className="font-medium text-blue-600 hover:text-blue-700">{c.name}</Link></TableCell>
@@ -79,6 +79,7 @@ export default function CustomersPage() {
                 <TableCell>{c.phone}</TableCell>
                 <TableCell>{c.loyaltyPoints}</TableCell>
                 <TableCell>{formatCurrency(c.storeCredit)}</TableCell>
+                <TableCell className={(c.amountOwed ?? 0) > 0 ? "font-medium text-orange-600" : "text-gray-400"}>{(c.amountOwed ?? 0) > 0 ? formatCurrency(c.amountOwed ?? 0) : "—"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

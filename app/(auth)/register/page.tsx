@@ -66,7 +66,7 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input label="Full Name" placeholder="John Smith" error={errors.name?.message} {...register("name")} />
+          <Input label="Full Name" placeholder="Kamau Mwangi" error={errors.name?.message} {...register("name")} />
           <Input label="Email" type="email" placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
           <Input label="Password" type="password" error={errors.password?.message} {...register("password")} />
           <Input label="Confirm Password" type="password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />

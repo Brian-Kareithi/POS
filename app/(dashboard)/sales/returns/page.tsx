@@ -2,8 +2,12 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useDataStore } from "@/lib/stores/data-store"
+import { useAuthStore } from "@/lib/stores/auth-store"
+import { useBranchFilter } from "@/lib/hooks/use-branch-filter"
+import { can } from "@/lib/permissions"
+import { refundSale } from "@/lib/services/checkout"
+import { notify } from "@/lib/toast"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
 import { SearchInput } from "@/components/ui/search-input"
@@ -11,75 +15,70 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { StatsCard } from "@/components/ui/stats-card"
-import { Dialog } from "@/components/ui/dialog"
 import { EmptyState } from "@/components/ui/empty-state"
+import { ApprovalDialog } from "@/components/pos/approval-dialog"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { generateId } from "@/lib/utils/generators"
-import { ArrowLeft, RefreshCw, DollarSign, Undo2 } from "lucide-react"
+import { RefreshCw, DollarSign, ArrowLeft, Undo2 } from "lucide-react"
+
+const reasons = ["Damaged item", "Wrong item", "Customer changed mind", "Expired product", "Pricing error"]
 
 export default function SalesReturnsPage() {
-  const router = useRouter()
-  const { sales, updateSale, addNotification } = useDataStore()
+  const customers = useDataStore((s) => s.customers)
+  const user = useAuthStore((s) => s.user)
+  const { sales } = useBranchFilter()
   const [search, setSearch] = useState("")
-  const [showRefund, setShowRefund] = useState<string | null>(null)
+  const [target, setTarget] = useState<string | null>(null)
 
-  const refunded = useMemo(() => sales.filter((s) => s.status === "refunded"), [sales])
-  const refundable = useMemo(() => sales.filter((s) => s.status === "completed"), [sales])
-
-  const filtered = useMemo(() => refunded.filter((s) =>
-    s.orderNumber.toLowerCase().includes(search.toLowerCase())
-  ), [refunded, search])
-
+  const customerName = (id?: string) => customers.find((c) => c.id === id)?.name ?? "Walk-in"
+  const refunded = useMemo(() => sales.filter((s) => s.status === "refunded" || s.status === "cancelled"), [sales])
+  const refundable = useMemo(() => sales.filter((s) => s.status === "completed").slice(0, 30), [sales])
+  const filtered = useMemo(() => refunded.filter((s) => (s.receiptNumber ?? s.orderNumber).toLowerCase().includes(search.toLowerCase())), [refunded, search])
   const totalRefunded = refunded.reduce((sum, s) => sum + s.total, 0)
+  const sale = sales.find((s) => s.id === target)
 
-  const handleRefund = (saleId: string) => {
-    const sale = sales.find((s) => s.id === saleId)
-    if (!sale) return
-    updateSale(saleId, { status: "refunded" })
-    addNotification({
-      id: generateId(),
-      userId: "",
-      title: "Sale Refunded",
-      message: `Sale ${sale.orderNumber} for ${formatCurrency(sale.total)} was refunded.`,
-      type: "warning",
-      read: false,
-      createdAt: new Date().toISOString(),
-    })
-    setShowRefund(null)
+  const confirm = ({ reason, approvedBy }: { reason: string; approvedBy?: string }) => {
+    if (!target) return
+    try {
+      refundSale(target, "refund", reason, approvedBy)
+    } catch (error) {
+      notify.error("Couldn't complete that", error instanceof Error ? error.message : undefined)
+    }
+    setTarget(null)
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Returns" description={`${refunded.length} refunded transactions`}>
+      <PageHeader title="Returns & voids" description={`${refunded.length} refunded or voided transactions`}>
         <Link href="/sales"><Button variant="secondary"><ArrowLeft className="h-4 w-4" />Back to Sales</Button></Link>
       </PageHeader>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatsCard title="Total Refunded" value={formatCurrency(totalRefunded)} icon={DollarSign} />
         <StatsCard title="Returns" value={refunded.length.toString()} icon={RefreshCw} />
-        <StatsCard title="Refundable Sales" value={refundable.length.toString()} icon={Undo2} />
+        <StatsCard title="Recent sales you can refund" value={refundable.length.toString()} icon={Undo2} />
       </div>
 
       <Card><CardContent className="p-4">
-        <SearchInput placeholder="Search by order number..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+        <SearchInput placeholder="Search by receipt number..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
       </CardContent></Card>
 
       <Card><CardContent className="p-0">
         <Table>
-          <TableHeader><TableRow><TableHead>Order #</TableHead><TableHead>Customer</TableHead><TableHead>Total</TableHead><TableHead>Payment</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Receipt</TableHead><TableHead>Customer</TableHead><TableHead>Total</TableHead><TableHead>Reason</TableHead><TableHead>Approved by</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="p-0">
+              <TableRow><TableCell colSpan={7} className="p-0">
                 <EmptyState icon={<RefreshCw className="h-12 w-12" />} title="No returns yet" description="Refund a completed sale to see it here." />
               </TableCell></TableRow>
-            ) : filtered.map((sale) => (
-              <TableRow key={sale.id}>
-                <TableCell className="font-medium"><Link href={`/sales/${sale.id}`} className="text-blue-600 hover:text-blue-700">{sale.orderNumber}</Link></TableCell>
-                <TableCell>{sale.customer?.name || "Walk-in"}</TableCell>
-                <TableCell>{formatCurrency(sale.total)}</TableCell>
-                <TableCell className="capitalize">{sale.paymentMethod.replace("_", " ")}</TableCell>
-                <TableCell><Badge variant="danger">refunded</Badge></TableCell>
-                <TableCell className="text-gray-500">{formatDateTime(sale.createdAt)}</TableCell>
+            ) : filtered.slice(0, 50).map((s) => (
+              <TableRow key={s.id}>
+                <TableCell className="font-medium"><Link href={`/sales/${s.id}`} className="text-blue-600 hover:text-blue-700">{s.receiptNumber ?? s.orderNumber}</Link></TableCell>
+                <TableCell>{customerName(s.customerId)}</TableCell>
+                <TableCell>{formatCurrency(s.total)}</TableCell>
+                <TableCell className="text-gray-500">{s.refundReason ?? s.voidReason ?? "—"}</TableCell>
+                <TableCell className="text-gray-500">{s.approvedBy ?? "—"}</TableCell>
+                <TableCell><Badge variant="danger">{s.status === "cancelled" ? "voided" : "refunded"}</Badge></TableCell>
+                <TableCell className="text-gray-500">{formatDateTime(s.createdAt)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -89,15 +88,16 @@ export default function SalesReturnsPage() {
       {refundable.length > 0 && (
         <Card>
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Process a Return</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Process a return</h3>
+            <p className="mb-3 text-sm text-gray-500">{can(user?.role, "refund.issue") ? "Choose a sale and give a reason." : "A manager's PIN is needed to approve a refund."}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
-              {refundable.map((sale) => (
-                <div key={sale.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
+              {refundable.map((s) => (
+                <div key={s.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{sale.orderNumber}</p>
-                    <p className="text-xs text-gray-500">{formatCurrency(sale.total)} • {sale.customer?.name || "Walk-in"}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{s.receiptNumber ?? s.orderNumber}</p>
+                    <p className="text-xs text-gray-500">{formatCurrency(s.total)} • {customerName(s.customerId)}</p>
                   </div>
-                  <Button size="sm" variant="danger" onClick={() => setShowRefund(sale.id)}>Refund</Button>
+                  <Button size="sm" variant="danger" onClick={() => setTarget(s.id)}>Refund</Button>
                 </div>
               ))}
             </div>
@@ -105,19 +105,16 @@ export default function SalesReturnsPage() {
         </Card>
       )}
 
-      <Dialog open={!!showRefund} onClose={() => setShowRefund(null)} title="Refund Sale" size="sm">
-        <p className="text-sm text-gray-600 mb-4">
-          Refund this sale for <span className="font-medium">{showRefund ? formatCurrency(sales.find((s) => s.id === showRefund)?.total || 0) : ""}</span>? This will mark the sale as refunded.
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={() => setShowRefund(null)}>Cancel</Button>
-          <Button variant="danger" onClick={() => showRefund && handleRefund(showRefund)}>Confirm Refund</Button>
-        </div>
-      </Dialog>
-
-      <div className="flex justify-end">
-        <Button variant="secondary" onClick={() => router.push("/sales")}><ArrowLeft className="h-4 w-4" />Back to Sales</Button>
-      </div>
+      <ApprovalDialog
+        open={!!sale}
+        title="Refund sale"
+        description={sale ? `${sale.receiptNumber ?? sale.orderNumber} · ${formatCurrency(sale.total)}. Stock goes back on the shelf and this is written to the audit log.` : undefined}
+        reasons={reasons}
+        needsApproval={!can(user?.role, "refund.issue")}
+        confirmLabel="Confirm refund"
+        onClose={() => setTarget(null)}
+        onConfirm={confirm}
+      />
     </div>
   )
 }

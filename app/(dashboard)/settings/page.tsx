@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Building2, Percent, Printer, CreditCard, Users,
-  HardDrive, Key, Bell
+  HardDrive, Key, Plug
 } from "lucide-react"
 
 const settingsItems = [
@@ -13,8 +13,9 @@ const settingsItems = [
   { href: "/settings/taxes", label: "Tax Settings", desc: "Configure tax rates and rules", icon: Percent },
   { href: "/settings/receipts", label: "Receipt Settings", desc: "Customize receipt templates", icon: Printer },
   { href: "/settings/payments", label: "Payment Settings", desc: "Payment method configuration", icon: CreditCard },
-  { href: "/settings/users", label: "User Management", desc: "Manage users and permissions", icon: Users },
-  { href: "/settings/backups", label: "Backup Settings", desc: "Configure automated backups", icon: HardDrive },
+  { href: "/employees", label: "Staff & permissions", desc: "Roles, branches and who can do what", icon: Users },
+  { href: "/settings/integrations", label: "Integrations", desc: "M-Pesa, eTIMS, printers and scanners", icon: Plug },
+  { href: "/settings/backups", label: "Backups & data export", desc: "Download, restore and export your data", icon: HardDrive },
   { href: "/settings/api-keys", label: "API Keys", desc: "Manage API integrations", icon: Key },
 ]
 

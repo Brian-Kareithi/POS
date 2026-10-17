@@ -5,13 +5,18 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --color-blue-50: #eff6ff;
-  --color-blue-100: #dbeafe;
-  --color-blue-200: #bfdbfe;
-  --color-blue-600: #2563eb;
-  --color-blue-700: #1d4ed8;
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
+  --color-blue-50: #eef7f1;
+  --color-blue-100: #dff1e5;
+  --color-blue-200: #b8dec4;
+  --color-blue-300: #8cc9a1;
+  --color-blue-400: #4fae6f;
+  --color-blue-500: #1f9a4a;
+  --color-blue-600: #07872f;
+  --color-blue-700: #066f28;
+  --color-blue-800: #0a5a25;
+  --color-blue-900: #0b4a21;
+  --color-gray-50: #f3f5f4;
+  --color-gray-100: #e9eeeb;
   --color-gray-200: #e5e7eb;
   --color-gray-300: #d1d5db;
   --color-gray-400: #9ca3af;
@@ -39,6 +44,10 @@ body {
 }
 
 .dark {
+  --color-blue-50: #0a1f12;
+  --color-blue-100: #0d2b19;
+  --color-blue-200: #14452a;
+  --color-blue-700: #4fd17f;
   --color-gray-50: #111111;
   --color-gray-100: #1a1a1a;
   --color-gray-200: #222222;
@@ -48,9 +57,6 @@ body {
   --color-gray-600: #aaaaaa;
   --color-gray-700: #cccccc;
   --color-gray-900: #eeeeee;
-  --color-blue-50: #0a1628;
-  --color-blue-100: #0d2137;
-  --color-blue-200: #1a365d;
   --color-green-50: #0a1a0a;
   --color-green-100: #0d2b0d;
   --color-red-50: #1a0a0a;
@@ -116,4 +122,33 @@ body {
   nav, header, footer, .no-print {
     display: none !important;
   }
+}
+
+@media print {
+  body * { visibility: hidden !important; }
+  .print-receipt, .print-receipt * { visibility: visible !important; }
+  .print-receipt { position: fixed; left: 0; top: 0; width: 80mm; border: none !important; }
+  .print-area, .print-area * { visibility: visible !important; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  .no-print { display: none !important; }
+}
+
+/* Chart colours: a validated categorical palette (light / dark steps). */
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --chart-grid: #e5e7eb;
+  --chart-text: #52514e;
+}
+.dark {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --chart-grid: #2a2a2a;
+  --chart-text: #c3c2b7;
 }

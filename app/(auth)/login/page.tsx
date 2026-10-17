@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { landingFor } from "@/lib/navigation"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,8 +20,10 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>
 
 const quickUsers = [
-  { email: "owner@mainstreetretail.com", label: "Owner / Director", role: "owner", color: "bg-blue-600 hover:bg-blue-700" },
-  { email: "sales1@mainstreetretail.com", label: "Sales Person", role: "sales_person", color: "bg-gray-700 hover:bg-gray-800" },
+  { email: "owner@jamiiretail.co.ke", label: "Owner / Director", color: "bg-blue-600 hover:bg-blue-700" },
+  { email: "manager@jamiiretail.co.ke", label: "Manager", color: "bg-blue-500 hover:bg-blue-600" },
+  { email: "cashier1@jamiiretail.co.ke", label: "Cashier", color: "bg-gray-700 hover:bg-gray-800" },
+  { email: "stock@jamiiretail.co.ke", label: "Stockkeeper", color: "bg-gray-600 hover:bg-gray-700" },
 ]
 
 export default function LoginPage() {
@@ -31,14 +34,14 @@ export default function LoginPage() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "owner@mainstreetretail.com", password: "password" },
+    defaultValues: { email: "owner@jamiiretail.co.ke", password: "password" },
   })
 
   const onSubmit = async (data: LoginForm) => {
     setError(null)
     try {
       await login(data.email, data.password)
-      router.push("/")
+      router.push(landingFor(useAuthStore.getState().user?.role))
     } catch {
       setError("Invalid email or password")
     }
@@ -49,7 +52,7 @@ export default function LoginPage() {
     setError(null)
     try {
       await login(email, "password")
-      router.push("/")
+      router.push(landingFor(useAuthStore.getState().user?.role))
     } catch {
       setError("Sign in failed")
     }

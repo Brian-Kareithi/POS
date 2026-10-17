@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     user: {
       id: "1",
       email,
-      name: "John Smith",
+      name: "Kamau Mwangi",
       role: "business_owner",
     },
   })
