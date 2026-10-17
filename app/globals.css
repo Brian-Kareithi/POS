@@ -289,3 +289,37 @@ html.theme-fade, html.theme-fade * { transition: background-color 200ms ease, bo
   .page-actions > a, .page-actions > button { display: flex; }
   .page-actions > a > button, .page-actions > button { width: 100%; }
 }
+
+/* Receipt: paper look in both themes, so the screen matches the printout. */
+.receipt-paper {
+  background: #fff; color: #111; font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px; line-height: 1.45; padding: 16px; width: 100%; max-width: 320px; margin: 0 auto;
+  border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.08);
+}
+.receipt-paper[data-paper="58mm"] { max-width: 232px; font-size: 11px; padding: 12px; }
+.receipt-paper[data-paper="a4"] { max-width: 560px; font-size: 13px; padding: 28px; }
+.receipt-paper .r-center { text-align: center; }
+.receipt-paper .r-title { font-size: 1.2em; font-weight: 700; }
+.receipt-paper .r-muted { color: #6b7280; }
+.receipt-paper .r-ink { color: #111; }
+.receipt-paper .r-bold { font-weight: 700; }
+.receipt-paper .r-gap { margin-top: 6px; }
+.receipt-paper .r-rule { border-top: 1px dashed #9ca3af; margin: 8px 0; }
+.receipt-paper .r-row { display: flex; justify-content: space-between; gap: 8px; }
+.receipt-paper .r-item { margin-bottom: 4px; }
+.receipt-paper .r-total { margin-top: 4px; font-size: 1.15em; font-weight: 700; }
+.receipt-paper .r-qr { display: flex; justify-content: center; margin: 6px 0; }
+.receipt-paper p { margin: 0; overflow-wrap: anywhere; }
+
+.print-root { display: none; }
+@media print {
+  body.receipt-printing > *:not(.print-root) { display: none !important; }
+  body.receipt-printing .print-root { display: block !important; position: static; }
+  body.receipt-printing .print-root .print-receipt {
+    position: static !important; width: var(--paper-w, 80mm) !important; max-width: none; margin: 0 auto;
+    box-shadow: none; border-radius: 0; padding: 0; background: #fff !important; color: #000 !important;
+  }
+  body.receipt-printing .print-root .print-receipt[data-paper="a4"] { padding: 0; }
+  body.receipt-printing, body.receipt-printing html { background: #fff !important; }
+  .print-receipt, .print-receipt * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

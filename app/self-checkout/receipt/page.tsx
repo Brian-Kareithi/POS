@@ -7,6 +7,7 @@ import { useDataStore } from "@/lib/stores/data-store"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
 import { CheckCircle, Printer, Download, Home, Receipt } from "lucide-react"
 import Link from "next/link"
+import { ReceiptPrintRoot, printReceipt } from "@/components/pos/receipt-slip"
 
 export default function ReceiptPage() {
   const sales = useDataStore((s) => s.sales)
@@ -29,6 +30,7 @@ export default function ReceiptPage() {
 
   return (
     <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
+      <ReceiptPrintRoot sale={sale} />
       <Card className="w-full max-w-sm">
         <CardContent className="p-8 text-center space-y-4">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
@@ -50,7 +52,7 @@ export default function ReceiptPage() {
             <div className="flex justify-between text-base font-bold"><span>Amount Paid</span><span>{formatCurrency(sale.paidAmount)}</span></div>
           </div>
           <div className="flex gap-3 pt-4">
-            <Button variant="secondary" className="flex-1" onClick={() => window.print()}><Printer className="h-4 w-4" />Print</Button>
+            <Button variant="secondary" className="flex-1" onClick={printReceipt}><Printer className="h-4 w-4" />Print</Button>
             <Button variant="secondary" className="flex-1"><Download className="h-4 w-4" />Download</Button>
           </div>
           <Link href="/self-checkout"><Button className="w-full"><Home className="h-4 w-4" />Back to Start</Button></Link>

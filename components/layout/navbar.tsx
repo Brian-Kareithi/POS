@@ -62,7 +62,7 @@ export function Navbar() {
         <ConnectionStatus />
         {can(user?.role, "pos.sell") && <Link
           href="/sales/new"
-          className="flex items-center gap-2 rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium hover:bg-blue-700 sm:px-4"
+          className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium hover:bg-blue-700 sm:px-4"
         >
           <ShoppingCart className="h-4 w-4" />
           <span className="hidden sm:inline">New Sale</span>
@@ -90,7 +90,7 @@ export function Navbar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-gray-600">
               {user?.name?.charAt(0) || "U"}
             </div>
-            <span className="hidden lg:block text-sm font-medium">{user?.name || "User"}</span>
+            <span className="hidden max-w-32 truncate whitespace-nowrap lg:block text-sm font-medium">{user?.name || "User"}</span>
             <ChevronDown className="hidden lg:block h-4 w-4 text-gray-400" />
           </button>
 
