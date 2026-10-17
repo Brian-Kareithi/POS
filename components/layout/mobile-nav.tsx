@@ -19,15 +19,16 @@ export function MobileNav() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg lg:hidden"
+        aria-label="Open menu"
+        className={cn("fixed right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg lg:hidden", pathname === "/" ? "bottom-36 md:bottom-20" : "bottom-20")}
       >
         <Menu className="h-6 w-6" />
       </button>
 
       {open && (
         <>
-          <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setOpen(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6">
+          <div className="fixed inset-0 z-50 bg-black/50 anim-overlay" onClick={() => setOpen(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-50 anim-sheet bg-white rounded-t-2xl max-h-[70vh] overflow-y-auto pb-6">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <span className="text-lg font-bold text-gray-900">Menu</span>
               <button

@@ -11,7 +11,7 @@ export default function CartPage() {
   const cart = useCartStore()
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-dvh bg-gray-50 flex flex-col">
       <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
         <Link href="/self-checkout/scan" className="text-sm text-blue-600 hover:text-blue-700"><ArrowLeft className="h-4 w-4 inline" /> Back</Link>
         <h1 className="text-lg font-semibold text-gray-900">Your Cart ({cart.getItemCount()} items)</h1>

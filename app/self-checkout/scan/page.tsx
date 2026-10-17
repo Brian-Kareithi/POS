@@ -28,7 +28,7 @@ export default function ScanPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-dvh bg-gray-50 flex flex-col">
       <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
         <Link href="/self-checkout" className="text-sm text-blue-600 hover:text-blue-700">Back</Link>
         <h1 className="text-lg font-semibold text-gray-900">Scan Items</h1>

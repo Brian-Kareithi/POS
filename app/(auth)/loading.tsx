@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AuthLoading() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="min-h-dvh flex flex-col items-center justify-center bg-gray-50 px-4 py-16">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Skeleton className="h-8 w-48 mx-auto" />

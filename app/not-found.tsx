@@ -5,7 +5,7 @@ import { APP_NAME } from "@/lib/constants"
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
+    <div className="min-h-dvh flex flex-col items-center justify-center bg-white px-4">
       <div className="text-center max-w-md">
         <div className="text-6xl font-bold text-gray-200 mb-4">404</div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Page not found</h1>

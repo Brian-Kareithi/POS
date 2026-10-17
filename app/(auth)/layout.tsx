@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { APP_NAME } from "@/lib/constants"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export const metadata: Metadata = {
   title: `${APP_NAME} - Authentication`,
@@ -7,7 +8,8 @@ export const metadata: Metadata = {
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="relative min-h-dvh flex flex-col items-center justify-center bg-gray-50 px-4 py-16">
+      <ThemeToggle className="absolute right-3 top-3" />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">{APP_NAME}</h1>

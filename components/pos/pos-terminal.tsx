@@ -224,10 +224,10 @@ export function PosTerminal() {
   }, [])
 
   return (
-    <div className="flex h-full min-h-0 gap-2 text-[#17231d] lg:gap-3">
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-[#f3f5f4]">
-        <header className="flex h-[54px] shrink-0 items-center gap-2 border-b border-[#e8ece9] bg-white px-4">
-          <label className="flex h-9 max-w-[420px] flex-1 items-center gap-2 rounded-lg border border-[#e3e8e4] px-3 text-[#859189]">
+    <div className="flex h-full min-h-0 gap-2 text-pos-ink lg:gap-3">
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-pos-canvas">
+        <header className="flex h-[54px] shrink-0 items-center gap-2 border-b border-pos-tile bg-white px-4">
+          <label className="flex h-9 max-w-[420px] flex-1 items-center gap-2 rounded-lg border border-pos-line px-3 text-pos-muted">
             <Search size={15} />
             <input
               ref={searchRef}
@@ -238,30 +238,30 @@ export function PosTerminal() {
                 if (findProductByCode(products, search)) { handleCode(search); setSearch("") }
               }}
               placeholder="Search or scan a barcode (F2)"
-              className="min-w-0 flex-1 bg-transparent text-xs text-[#26352c] outline-none placeholder:text-[#8b968f]"
+              className="min-w-0 flex-1 bg-transparent text-xs text-pos-text outline-none placeholder:text-pos-muted"
             />
           </label>
           <div className="ml-auto flex items-center gap-2">
-            <button onClick={() => setScanOpen(true)} className="flex h-9 items-center gap-1.5 rounded-lg border border-[#e3e8e4] px-3 text-xs font-medium text-[#087332] hover:bg-[#eef5f0]"><ScanLine size={15} /><span className="hidden sm:inline">Scan</span></button>
+            <button onClick={() => setScanOpen(true)} className="flex h-9 items-center gap-1.5 rounded-lg border border-pos-line px-3 text-xs font-medium text-pos-green hover:bg-pos-hover"><ScanLine size={15} /><span className="hidden sm:inline">Scan</span></button>
             {can(user?.role, "products.edit") && (
-              <button onClick={() => { setUnknownCode(""); setAddOpen(true) }} className="flex h-9 items-center gap-1.5 rounded-lg bg-[#07872f] px-3 text-xs font-semibold text-white hover:bg-[#066f28]"><PackagePlus size={15} /><span className="hidden sm:inline">Add product</span></button>
+              <button onClick={() => { setUnknownCode(""); setAddOpen(true) }} className="flex h-9 items-center gap-1.5 rounded-lg bg-pos-brand px-3 text-xs font-semibold text-white hover:bg-pos-brand-hover"><PackagePlus size={15} /><span className="hidden sm:inline">Add product</span></button>
             )}
           </div>
         </header>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pt-3 text-xs">
           {myShift ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-[#dff1e5] px-3 py-1 font-medium text-[#086c30]"><Clock size={13} />Shift open since {new Date(myShift.openedAt).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span className="flex items-center gap-1.5 rounded-full bg-pos-accent px-3 py-1 font-medium text-pos-green"><Clock size={13} />Shift open since {new Date(myShift.openedAt).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}</span>
           ) : (
-            <Link href="/employees/shifts" className="flex items-center gap-1.5 rounded-full bg-[#fff4e5] px-3 py-1 font-medium text-[#9a5b00]"><Clock size={13} />{needsShift ? "Open your shift to start selling" : "No shift open"}</Link>
+            <Link href="/employees/shifts" className="flex items-center gap-1.5 rounded-full bg-pos-warn-bg px-3 py-1 font-medium text-pos-warn-text"><Clock size={13} />{needsShift ? "Open your shift to start selling" : "No shift open"}</Link>
           )}
-          {branchName && branches.length > 1 && <span className="rounded-full bg-white px-3 py-1 font-medium text-[#506056]">Selling at {branchName}</span>}
-          {offlineMode && <span className="flex items-center gap-1.5 rounded-full bg-[#fff4e5] px-3 py-1 font-medium text-[#9a5b00]"><WifiOff size={13} />Offline — sales are saved on this device</span>}
-          <span className="ml-auto hidden text-[#8a978f] xl:block">F2 search · F4 charge · F6 hold · F8 customer · F9 discount</span>
+          {branchName && branches.length > 1 && <span className="rounded-full bg-white px-3 py-1 font-medium text-pos-sub">Selling at {branchName}</span>}
+          {offlineMode && <span className="flex items-center gap-1.5 rounded-full bg-pos-warn-bg px-3 py-1 font-medium text-pos-warn-text"><WifiOff size={13} />Offline — sales are saved on this device</span>}
+          <span className="ml-auto hidden text-pos-muted xl:block">F2 search · F4 charge · F6 hold · F8 customer · F9 discount</span>
         </div>
 
         {warning && (
-          <div role="alert" className="mx-4 mt-3 flex items-center justify-between gap-2 rounded-lg bg-[#fff4e5] px-3 py-2 text-xs text-[#9a5b00]">
+          <div role="alert" className="mx-4 mt-3 flex items-center justify-between gap-2 rounded-lg bg-pos-warn-bg px-3 py-2 text-xs text-pos-warn-text">
             <span>{warning}</span>
             <span className="flex items-center gap-2">
               {unknownCode && can(user?.role, "products.edit") && <button onClick={() => setAddOpen(true)} className="font-semibold underline">Add as new product</button>}
@@ -272,10 +272,10 @@ export function PosTerminal() {
 
         <div className="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none]">
           {[{ id: "all", name: "All" }, ...categories.filter((c) => c.isActive)].map((category) => (
-            <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`flex min-w-[82px] flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${activeCategory === category.id ? "border-[#b8dec4] bg-[#dff1e5] text-[#086c30]" : "border-white bg-white text-[#26352c] hover:border-[#c6ddcd]"}`}>
-              <span className="mb-2 grid h-6 w-6 place-items-center rounded-md bg-white/80"><Grid2X2 size={15} /></span>
+            <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`flex min-w-[82px] flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${activeCategory === category.id ? "border-pos-accent-line bg-pos-accent text-pos-green" : "border-transparent bg-white text-pos-text hover:border-pos-line-strong"}`}>
+              <span className="mb-2 grid h-6 w-6 place-items-center rounded-md bg-white/80 dark:bg-white/10"><Grid2X2 size={15} /></span>
               <span className="whitespace-nowrap text-[11px] font-semibold">{category.name}</span>
-              <span className="mt-0.5 text-[9px] text-[#869189]">{category.id === "all" ? activeProducts.length : activeProducts.filter((p) => p.categoryId === category.id).length} items</span>
+              <span className="mt-0.5 text-[9px] text-pos-muted">{category.id === "all" ? activeProducts.length : activeProducts.filter((p) => p.categoryId === category.id).length} items</span>
             </button>
           ))}
         </div>
@@ -289,8 +289,8 @@ export function PosTerminal() {
               const days = daysToExpiry(product)
               const blocked = stock === 0 || expiry === "expired"
               return (
-                <article key={product.id} className={`overflow-hidden rounded-xl border bg-white p-2.5 shadow-sm ${quantity ? "border-[#14853b]" : "border-white"}`}>
-                  <div className="relative grid h-28 place-items-center overflow-hidden rounded-lg bg-[#e8ece9] text-[#9aa79f] sm:h-24 xl:h-[108px]">
+                <article key={product.id} className={`overflow-hidden rounded-xl border bg-white p-2.5 shadow-sm ${quantity ? "border-[#14853b]" : "border-transparent"}`}>
+                  <div className="relative grid h-28 place-items-center overflow-hidden rounded-lg bg-pos-tile text-pos-muted sm:h-24 xl:h-[108px]">
                     {product.image
                       ? <div role="img" aria-label={product.name} className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url("${product.image}")` }} />
                       : <ImageIcon size={28} />}
@@ -299,71 +299,71 @@ export function PosTerminal() {
                   </div>
                   <h2 className="mt-2 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">{product.name}</h2>
                   <div className="mt-1 flex items-center justify-between text-[10px]">
-                    <span className="font-bold text-[#087a31]">{formatCurrency(product.sellingPrice)}</span>
-                    <span className={stock === 0 ? "font-semibold text-[#c0392b]" : stock <= product.minStock ? "font-semibold text-[#c77700]" : "text-[#859088]"}>{stock === 0 ? "Out of stock" : `${stock} in stock`}</span>
+                    <span className="font-bold text-pos-green">{formatCurrency(product.sellingPrice)}</span>
+                    <span className={stock === 0 ? "font-semibold text-pos-danger" : stock <= product.minStock ? "font-semibold text-pos-warn-text" : "text-pos-muted"}>{stock === 0 ? "Out of stock" : `${stock} in stock`}</span>
                   </div>
                   {quantity ? (
-                    <div className="mt-2 flex h-8 items-center justify-between rounded-md bg-[#e8f3eb] px-2 text-xs">
-                      <button onClick={() => updateQuantity(product.id, -1)} aria-label={`Remove one ${product.name}`} className="grid h-6 w-6 place-items-center rounded-full text-[#078331]"><Minus size={14} /></button>
+                    <div className="mt-2 flex h-8 items-center justify-between rounded-md bg-pos-accent-soft px-2 text-xs">
+                      <button onClick={() => updateQuantity(product.id, -1)} aria-label={`Remove one ${product.name}`} className="grid h-6 w-6 place-items-center rounded-full text-pos-brand"><Minus size={14} /></button>
                       <span className="font-semibold">{quantity}</span>
-                      <button onClick={() => addItem(product)} aria-label={`Add one ${product.name}`} className="grid h-6 w-6 place-items-center rounded-full bg-[#078331] text-white"><Plus size={14} /></button>
+                      <button onClick={() => addItem(product)} aria-label={`Add one ${product.name}`} className="grid h-6 w-6 place-items-center rounded-full bg-pos-brand text-white"><Plus size={14} /></button>
                     </div>
                   ) : (
-                    <button onClick={() => addItem(product)} disabled={blocked} className="mt-2 h-8 w-full rounded-md bg-[#d7eee0] text-[10px] font-semibold text-[#087332] hover:bg-[#c7e7d3] disabled:cursor-not-allowed disabled:bg-[#eceeed] disabled:text-[#9aa49e]">{expiry === "expired" ? "Expired" : stock === 0 ? "Out of stock" : "Add to order"}</button>
+                    <button onClick={() => addItem(product)} disabled={blocked} className="mt-2 h-8 w-full rounded-md bg-pos-accent-soft text-[10px] font-semibold text-pos-green hover:bg-pos-accent-soft-hover disabled:cursor-not-allowed disabled:bg-pos-disabled-bg disabled:text-pos-muted">{expiry === "expired" ? "Expired" : stock === 0 ? "Out of stock" : "Add to order"}</button>
                   )}
                 </article>
               )
             })}
-            {visibleItems.length === 0 && <p className="col-span-full py-12 text-center text-sm text-[#7a877f]">{activeProducts.length === 0 ? "No products yet. Add products to start selling." : "No products match your search."}</p>}
+            {visibleItems.length === 0 && <p className="col-span-full py-12 text-center text-sm text-pos-muted">{activeProducts.length === 0 ? "No products yet. Add products to start selling." : "No products match your search."}</p>}
           </div>
         </div>
       </section>
 
-      <button onClick={() => setOrderOpen(true)} className="fixed inset-x-4 bottom-20 z-10 flex h-12 items-center justify-between rounded-xl bg-[#07872f] px-4 text-xs font-semibold text-white shadow-lg md:hidden">
+      <button onClick={() => setOrderOpen(true)} className="fixed inset-x-4 bottom-20 z-10 flex h-12 items-center justify-between rounded-xl bg-pos-brand px-4 text-xs font-semibold text-white shadow-lg md:hidden">
         <span>View order · {itemCount} items</span><span>{formatCurrency(priced.total)}</span>
       </button>
 
       <aside className={`flex w-[min(340px,38vw)] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm max-md:fixed max-md:inset-x-2 max-md:bottom-20 max-md:top-[20vh] max-md:z-20 max-md:w-auto ${orderOpen ? "" : "max-md:hidden"}`}>
-        <header className="flex h-[60px] shrink-0 items-center justify-between border-b border-[#edf0ee] px-4">
-          <div><h1 className="text-sm font-bold">Current Sale</h1><p className="text-[10px] text-[#869189]">{user?.name ?? "Guest"} · {itemCount} items</p></div>
+        <header className="flex h-[60px] shrink-0 items-center justify-between border-b border-pos-line px-4">
+          <div><h1 className="text-sm font-bold">Current Sale</h1><p className="text-[10px] text-pos-muted">{user?.name ?? "Guest"} · {itemCount} items</p></div>
           <div className="flex items-center gap-1">
-            {order.length > 0 && <button aria-label="Clear order" onClick={resetOrder} className="grid h-8 w-8 place-items-center rounded-lg border border-[#e6eae7] text-[#7c8980]"><Trash2 size={15} /></button>}
-            <button aria-label="Close order" onClick={() => setOrderOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg border border-[#e6eae7] md:hidden"><X size={15} /></button>
+            {order.length > 0 && <button aria-label="Clear order" onClick={resetOrder} className="grid h-8 w-8 place-items-center rounded-lg border border-pos-line text-pos-muted"><Trash2 size={15} /></button>}
+            <button aria-label="Close order" onClick={() => setOrderOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg border border-pos-line md:hidden"><X size={15} /></button>
           </div>
         </header>
 
         <div className="mx-4 mt-3 grid shrink-0 grid-cols-3 gap-1.5 text-[10px] font-medium">
-          <button onClick={() => setCustomerOpen(true)} className="flex flex-col items-center gap-1 rounded-lg border border-[#e6eae7] py-2 text-[#506056] hover:bg-[#eef5f0]"><UserRound size={15} /><span className="max-w-full truncate px-1">{customer ? customer.name.split(" ")[0] : "Customer"}</span></button>
-          <button onClick={() => setDiscountOpen(true)} className={`flex flex-col items-center gap-1 rounded-lg border py-2 hover:bg-[#eef5f0] ${disc.total > 0 ? "border-[#b9dfc5] bg-[#ddf0e3] text-[#087332]" : "border-[#e6eae7] text-[#506056]"}`}><Percent size={15} />Discount</button>
-          <button onClick={() => (order.length ? holdOrder() : setHeldOpen(true))} className="relative flex flex-col items-center gap-1 rounded-lg border border-[#e6eae7] py-2 text-[#506056] hover:bg-[#eef5f0]">
+          <button onClick={() => setCustomerOpen(true)} className="flex flex-col items-center gap-1 rounded-lg border border-pos-line py-2 text-pos-sub hover:bg-pos-hover"><UserRound size={15} /><span className="max-w-full truncate px-1">{customer ? customer.name.split(" ")[0] : "Customer"}</span></button>
+          <button onClick={() => setDiscountOpen(true)} className={`flex flex-col items-center gap-1 rounded-lg border py-2 hover:bg-pos-hover ${disc.total > 0 ? "border-pos-accent-line bg-pos-accent text-pos-green" : "border-pos-line text-pos-sub"}`}><Percent size={15} />Discount</button>
+          <button onClick={() => (order.length ? holdOrder() : setHeldOpen(true))} className="relative flex flex-col items-center gap-1 rounded-lg border border-pos-line py-2 text-pos-sub hover:bg-pos-hover">
             {order.length ? <Pause size={15} /> : <Play size={15} />}{order.length ? "Hold" : "Held"}
-            {held.length > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#07872f] px-1 text-[9px] text-white">{held.length}</span>}
+            {held.length > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-pos-brand px-1 text-[9px] text-white">{held.length}</span>}
           </button>
         </div>
-        {held.length > 0 && order.length > 0 && <button onClick={() => setHeldOpen(true)} className="mx-4 mt-1.5 text-left text-[10px] text-[#087332] underline">{held.length} sale(s) on hold</button>}
+        {held.length > 0 && order.length > 0 && <button onClick={() => setHeldOpen(true)} className="mx-4 mt-1.5 text-left text-[10px] text-pos-green underline">{held.length} sale(s) on hold</button>}
 
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
           {order.map(({ product, quantity }) => (
-            <div key={product.id} className="flex gap-2 rounded-lg border border-[#e7ebe8] p-2">
-              <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-[#e8ece9] text-[#9aa79f]">
+            <div key={product.id} className="flex gap-2 rounded-lg border border-pos-line p-2">
+              <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-pos-tile text-pos-muted">
                 {product.image ? <div role="img" aria-label={product.name} className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url("${product.image}")` }} /> : <ImageIcon size={18} />}
               </div>
-              <div className="min-w-0 flex-1"><p className="line-clamp-2 text-[10px] font-medium leading-4">{product.name}</p><div className="mt-1 flex items-center justify-between"><span className="text-[9px] text-[#7b887f]">{formatCurrency(product.sellingPrice)} · {quantity}x</span><span className="text-[10px] font-bold text-[#087a31]">{formatCurrency(product.sellingPrice * quantity)}</span></div></div>
-              <div className="flex flex-col justify-between"><button onClick={() => updateQuantity(product.id, 1)} aria-label={`Add ${product.name}`} className="text-[#17833d]"><Plus size={13} /></button><button onClick={() => updateQuantity(product.id, -quantity)} aria-label={`Remove ${product.name}`} className="text-[#c0392b]"><Trash2 size={12} /></button></div>
+              <div className="min-w-0 flex-1"><p className="line-clamp-2 text-[10px] font-medium leading-4">{product.name}</p><div className="mt-1 flex items-center justify-between"><span className="text-[9px] text-pos-muted">{formatCurrency(product.sellingPrice)} · {quantity}x</span><span className="text-[10px] font-bold text-pos-green">{formatCurrency(product.sellingPrice * quantity)}</span></div></div>
+              <div className="flex flex-col justify-between"><button onClick={() => updateQuantity(product.id, 1)} aria-label={`Add ${product.name}`} className="text-pos-green"><Plus size={13} /></button><button onClick={() => updateQuantity(product.id, -quantity)} aria-label={`Remove ${product.name}`} className="text-pos-danger"><Trash2 size={12} /></button></div>
             </div>
           ))}
-          {order.length === 0 && <div className="grid h-full place-items-center text-center text-xs text-[#819087]">Scan or tap an item to start a sale.<br />Walk-in customers need no registration.</div>}
+          {order.length === 0 && <div className="grid h-full place-items-center text-center text-xs text-pos-muted">Scan or tap an item to start a sale.<br />Walk-in customers need no registration.</div>}
         </div>
 
-        <div className="shrink-0 border-t border-[#edf0ee] p-4">
-          <div className="space-y-1.5 rounded-lg bg-[#f5f6f5] p-3 text-[10px] text-[#637168]">
+        <div className="shrink-0 border-t border-pos-line p-4">
+          <div className="space-y-1.5 rounded-lg bg-pos-canvas p-3 text-[10px] text-pos-sub">
             <div className="flex justify-between"><span>Sub total</span><span>{formatCurrency(subtotal)}</span></div>
-            {priced.discountTotal > 0 && <div className="flex justify-between text-[#087a31]"><span>Discount{disc.promotion ? ` (${disc.promotion.code})` : ""}</span><span>-{formatCurrency(priced.discountTotal)}</span></div>}
+            {priced.discountTotal > 0 && <div className="flex justify-between text-pos-green"><span>Discount{disc.promotion ? ` (${disc.promotion.code})` : ""}</span><span>-{formatCurrency(priced.discountTotal)}</span></div>}
             <div className="flex justify-between"><span>VAT included</span><span>{formatCurrency(priced.taxTotal)}</span></div>
-            <div className="mt-2 flex justify-between border-t border-[#e6eae7] pt-2 text-xs font-bold text-[#202d24]"><span>Total</span><span>{formatCurrency(priced.total)}</span></div>
+            <div className="mt-2 flex justify-between border-t border-pos-line pt-2 text-xs font-bold text-pos-text"><span>Total</span><span>{formatCurrency(priced.total)}</span></div>
           </div>
-          {notice && <p role="status" className="mt-2 text-[10px] font-medium text-[#087a31]">{notice}</p>}
-          <button onClick={openCharge} disabled={!order.length} className="mt-3 h-11 w-full rounded-lg bg-[#07872f] text-sm font-semibold text-white hover:bg-[#066f28] disabled:cursor-not-allowed disabled:bg-[#a8b8ad]">Charge {formatCurrency(priced.total)} <span className="ml-1 text-[10px] font-normal opacity-80">F4</span></button>
+          {notice && <p role="status" className="mt-2 text-[10px] font-medium text-pos-green">{notice}</p>}
+          <button onClick={openCharge} disabled={!order.length} className="mt-3 h-11 w-full rounded-lg bg-pos-brand text-sm font-semibold text-white hover:bg-pos-brand-hover disabled:cursor-not-allowed disabled:bg-pos-disabled-btn">Charge {formatCurrency(priced.total)} <span className="ml-1 text-[10px] font-normal opacity-80">F4</span></button>
         </div>
       </aside>
 

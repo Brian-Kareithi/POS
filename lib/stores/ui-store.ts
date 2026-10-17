@@ -16,7 +16,7 @@ interface UIState {
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      sidebarOpen: true,
+      sidebarOpen: false,
       theme: "light",
       branchId: "all",
       setBranchId: (branchId) => set({ branchId }),

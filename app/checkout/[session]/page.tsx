@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { formatCurrency } from "@/lib/utils/format"
 import { generateId, generateOrderNumber } from "@/lib/utils/generators"
 import { PAYMENT_METHODS } from "@/lib/constants"
@@ -63,6 +64,7 @@ function parsePayload(raw: string | null): Pick<CheckoutSession, "items" | "tota
 export default function CheckoutPage() {
   return (
     <Suspense fallback={null}>
+      <ThemeToggle className="fixed right-3 top-3 z-30" />
       <CheckoutPageInner />
     </Suspense>
   )
@@ -106,7 +108,7 @@ function CheckoutPageInner() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center px-4">
+      <div className="min-h-dvh bg-gray-50 dark:bg-black flex items-center justify-center px-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="py-12">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
@@ -120,7 +122,7 @@ function CheckoutPageInner() {
 
   if (session.status === "completed") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center px-4">
+      <div className="min-h-dvh bg-gray-50 dark:bg-black flex items-center justify-center px-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="py-12">
             <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
@@ -134,7 +136,7 @@ function CheckoutPageInner() {
 
   if (new Date(session.expiresAt) < new Date()) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center px-4">
+      <div className="min-h-dvh bg-gray-50 dark:bg-black flex items-center justify-center px-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="py-12">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-orange-500" />
@@ -148,7 +150,7 @@ function CheckoutPageInner() {
 
   if (completed) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center px-4">
+      <div className="min-h-dvh bg-gray-50 dark:bg-black flex items-center justify-center px-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="py-12">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4">
@@ -212,11 +214,11 @@ function CheckoutPageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center px-4 py-8">
+    <div className="min-h-dvh bg-gray-50 dark:bg-black flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-md space-y-4">
         <div className="text-center mb-4">
-          <h1 className="text-xl font-bold text-white">Scan & Pay</h1>
-          <p className="text-sm text-gray-400">Review your items and complete payment</p>
+          <h1 className="text-xl font-bold text-gray-900">Scan & Pay</h1>
+          <p className="text-sm text-gray-500">Review your items and complete payment</p>
         </div>
 
         <Card>

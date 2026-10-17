@@ -51,7 +51,7 @@ export default function SelfCheckoutPage() {
   }, [session])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Self Checkout</h1>
         <p className="text-sm text-gray-500 mt-1">Scan, pay, and go</p>

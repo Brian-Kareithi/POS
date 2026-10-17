@@ -7,7 +7,7 @@ import { routeAllowed, landingFor } from "@/lib/navigation"
 import { useInitializeData } from "@/lib/hooks/use-initialize-data"
 import { useDataStore } from "@/lib/stores/data-store"
 import { useNotificationStore } from "@/lib/stores/notification-store"
-import { Skeleton, DashboardSkeleton } from "@/components/ui/skeleton"
+import { ShellSkeleton } from "@/components/ui/skeleton"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Navbar } from "@/components/layout/navbar"
 import { Breadcrumbs } from "@/components/layout/breadcrumbs"
@@ -45,32 +45,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     setUnreadCount(unread)
   }, [notifications, setUnreadCount])
 
-  if (!ready) {
-    return (
-      <div className="flex h-screen overflow-hidden bg-gray-50">
-        <div className="hidden lg:flex w-64 border-r border-gray-200 bg-white p-6 flex-col gap-4">
-          <Skeleton className="h-6 w-32" />
-          <div className="space-y-2 mt-8">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col">
-          <div className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-6">
-            <Skeleton className="h-8 w-64" />
-            <div className="flex gap-3">
-              <Skeleton className="h-8 w-24" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </div>
-          </div>
-          <DashboardSkeleton />
-        </div>
-      </div>
-    )
-  }
+  if (!ready) return <ShellSkeleton />
 
   if (!isAuthenticated || !allowed) return null
 
@@ -83,7 +58,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <Navbar />
         <main className={isPos ? "min-h-0 flex-1 overflow-hidden p-2 pb-16 lg:p-0" : "flex-1 overflow-y-auto p-4 pb-20 lg:rounded-xl lg:p-6 lg:pb-6"}>
           {!isPos && <Breadcrumbs />}
-          {children}
+          <div key={pathname} className={isPos ? "anim-page h-full" : "anim-page"}>{children}</div>
         </main>
       </div>
       <BottomNav />

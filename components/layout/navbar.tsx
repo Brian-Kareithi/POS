@@ -7,9 +7,10 @@ import { useNotificationStore } from "@/lib/stores/notification-store"
 import { BranchSwitcher, ConnectionStatus } from "@/components/layout/nav-status"
 import { ROLE_LABELS, can } from "@/lib/permissions"
 import { SearchInput } from "@/components/ui/search-input"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { cn } from "@/lib/utils/cn"
 import {
-  Menu, Moon, Sun, Bell, Search, LogOut, User,
+  Menu, Bell, Search, LogOut, User,
   Settings, ChevronDown, ShoppingCart
 } from "lucide-react"
 import Link from "next/link"
@@ -17,7 +18,7 @@ import { useRouter } from "next/navigation"
 
 export function Navbar() {
   const { user, logout } = useAuthStore()
-  const { theme, toggleTheme, toggleSidebar } = useUIStore()
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const { unreadCount } = useNotificationStore()
   const [showProfile, setShowProfile] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
@@ -29,7 +30,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="relative h-14 shrink-0 bg-white shadow-sm lg:rounded-xl flex items-center justify-between px-4 lg:px-5 gap-4">
+    <header className="relative h-14 shrink-0 bg-white shadow-sm lg:rounded-xl flex items-center justify-between px-3 sm:px-4 lg:px-5 gap-2 sm:gap-4">
       <div className="flex items-center gap-3">
         <button
           onClick={toggleSidebar}
@@ -39,7 +40,7 @@ export function Navbar() {
         </button>
 
         <div className="hidden md:block">
-          <SearchInput placeholder="Search products, sales, customers..." className="w-56 lg:w-80" />
+          <SearchInput placeholder="Search products, sales, customers..." className="w-40 lg:w-80" />
         </div>
 
         <button
@@ -51,29 +52,23 @@ export function Navbar() {
       </div>
 
       {showSearch && (
-        <div className="absolute top-14 left-0 right-0 p-4 bg-white border-b border-gray-200 md:hidden z-30">
+        <div className="absolute top-14 left-0 right-0 p-3 bg-white shadow-md border-b border-gray-200 md:hidden z-30">
           <SearchInput placeholder="Search..." autoFocus />
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <BranchSwitcher />
         <ConnectionStatus />
         {can(user?.role, "pos.sell") && <Link
           href="/sales/new"
-          className="flex items-center gap-2 rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700"
+          className="flex items-center gap-2 rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium hover:bg-blue-700 sm:px-4"
         >
           <ShoppingCart className="h-4 w-4" />
           <span className="hidden sm:inline">New Sale</span>
         </Link>}
 
-        <button
-          onClick={toggleTheme}
-          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-        >
-          {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-        </button>
+        <ThemeToggle className="h-9 w-9" />
 
         <Link
           href="/notifications"
@@ -102,7 +97,7 @@ export function Navbar() {
           {showProfile && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowProfile(false)} />
-              <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl border border-gray-200 bg-white shadow-lg py-1">
+              <div className="absolute right-0 top-full mt-1 z-50 anim-pop w-56 max-w-[calc(100vw-1.5rem)] rounded-xl border border-gray-200 bg-white shadow-lg py-1">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>

@@ -16,7 +16,7 @@ export default function ReceiptPage() {
 
   if (!sale) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
+      <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
         <Card className="w-full max-w-sm">
           <CardContent className="py-12 text-center space-y-4">
             <EmptyState icon={<Receipt className="h-12 w-12" />} title="No receipt available" description="Complete a payment to generate a receipt." />
@@ -28,7 +28,7 @@ export default function ReceiptPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
       <Card className="w-full max-w-sm">
         <CardContent className="p-8 text-center space-y-4">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
