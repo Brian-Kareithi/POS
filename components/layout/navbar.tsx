@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { useNotificationStore } from "@/lib/stores/notification-store"
@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useKeyboardShortcut } from "@/lib/hooks/use-keyboard-shortcut"
 
 export function Navbar() {
   const { user, logout } = useAuthStore()
@@ -23,6 +24,12 @@ export function Navbar() {
   const [showProfile, setShowProfile] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const router = useRouter()
+
+  const startNewSale = useCallback(() => {
+    if (can(user?.role, "pos.sell")) router.push("/sales/new")
+  }, [router, user?.role])
+
+  useKeyboardShortcut("q", startNewSale, { ctrl: true })
 
   const handleLogout = () => {
     logout()
