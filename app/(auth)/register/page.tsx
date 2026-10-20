@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { api } from "@/lib/api/client"
@@ -13,7 +13,9 @@ import { notify } from "@/lib/toast"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
+import { PasswordInput, PasswordStrength } from "@/components/auth/password-input"
+import { AuthAlert, AuthHeading } from "@/components/auth/auth-heading"
+import { Building2, Mail, Phone, UserRound } from "lucide-react"
 
 const registerSchema = z.object({
   businessName: z.string().trim().min(2, "Business name must be at least 2 characters").max(120, "Business name is too long"),
@@ -32,7 +34,8 @@ export default function RegisterPage() {
   const login = useAuthStore((s) => s.login)
   const signedIn = useAuthStore((s) => s.isAuthenticated && !!s.token)
   const [error, setError] = useState<string | null>(null)
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({ resolver: zodResolver(registerSchema) })
+  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<Form>({ resolver: zodResolver(registerSchema) })
+  const password = useWatch({ control, name: "password" }) ?? ""
 
   // Someone who already has a session has no business on the sign-up page.
   useEffect(() => {
@@ -63,24 +66,26 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card>
-      <CardContent className="p-6">
-        <h2 className="mb-1 text-xl font-semibold text-gray-900">Create your business</h2>
-        <p className="mb-6 text-sm text-gray-500">You&apos;ll be the owner. Staff can then join with a link you share.</p>
-        {error && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <Input label="Business name" autoComplete="organization" placeholder="Jamii Retail" error={errors.businessName?.message} {...register("businessName")} />
-          <Input label="Your full name" autoComplete="name" placeholder="Kamau Mwangi" error={errors.name?.message} {...register("name")} />
-          <Input label="Email" type="email" autoComplete="email" placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
-          <Input label="Phone (optional)" type="tel" autoComplete="tel" placeholder="0712 345 678" error={errors.phone?.message} {...register("phone")} />
-          <Input label="Password" type="password" autoComplete="new-password" placeholder="At least 8 characters" error={errors.password?.message} {...register("password")} />
-          <Input label="Confirm password" type="password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
-          <Button type="submit" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>Create business</Button>
-        </form>
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Already have an account? <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">Sign in</Link>
-        </p>
-      </CardContent>
-    </Card>
+    <div>
+      <AuthHeading title="Create your business" subtitle="You'll be the owner. Your staff can then join with a link you share, and you decide who gets in and what they can do." />
+      {error && <AuthAlert>{error}</AuthAlert>}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <Input label="Business name" autoComplete="organization" icon={<Building2 className="h-4 w-4" />} placeholder="Jamii Retail" error={errors.businessName?.message} {...register("businessName")} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label="Your full name" autoComplete="name" icon={<UserRound className="h-4 w-4" />} placeholder="Kamau Mwangi" error={errors.name?.message} {...register("name")} />
+          <Input label="Phone (optional)" type="tel" autoComplete="tel" icon={<Phone className="h-4 w-4" />} placeholder="0712 345 678" error={errors.phone?.message} {...register("phone")} />
+        </div>
+        <Input label="Email" type="email" autoComplete="email" icon={<Mail className="h-4 w-4" />} placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
+        <div>
+          <PasswordInput label="Password" autoComplete="new-password" placeholder="At least 8 characters" error={errors.password?.message} {...register("password")} />
+          <PasswordStrength value={password} />
+        </div>
+        <PasswordInput label="Confirm password" autoComplete="new-password" placeholder="Type it again" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+        <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>Create business</Button>
+      </form>
+      <p className="mt-6 text-center text-sm text-gray-500">
+        Already have an account? <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">Sign in</Link>
+      </p>
+    </div>
   )
 }

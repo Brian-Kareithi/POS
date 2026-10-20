@@ -12,7 +12,9 @@ import { notify } from "@/lib/toast"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
+import { PasswordInput } from "@/components/auth/password-input"
+import { AuthAlert, AuthHeading } from "@/components/auth/auth-heading"
+import { Mail, ShieldCheck } from "lucide-react"
 
 const loginSchema = z.object({
   email: z.string().trim().email("Enter a valid email address"),
@@ -52,40 +54,35 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardContent className="p-6">
-        <h2 className="mb-1 text-xl font-semibold text-gray-900">Sign in</h2>
-        <p className="mb-6 text-sm text-gray-500">Enter your credentials to access your account</p>
+    <div>
+      <AuthHeading title="Welcome back" subtitle="Sign in to open your till, check your shop and keep things moving." />
 
-        {notice && (
-          <div
-            role={notice.tone === "waiting" ? "status" : "alert"}
-            className={notice.tone === "waiting"
-              ? "mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
-              : "mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"}
-          >
-            {notice.tone === "waiting" && <span className="mb-0.5 block font-semibold">Almost there</span>}
-            {notice.message}
-          </div>
+      {notice && (
+        <AuthAlert tone={notice.tone === "waiting" ? "waiting" : "error"} title={notice.tone === "waiting" ? "Almost there" : undefined}>{notice.message}</AuthAlert>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <Input label="Email" type="email" autoComplete="email" icon={<Mail className="h-4 w-4" />} placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
+        <PasswordInput label="Password" autoComplete="current-password" placeholder="Enter your password" error={errors.password?.message} {...register("password")} />
+        {needsCode && (
+          <Input label="Two-factor code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} icon={<ShieldCheck className="h-4 w-4" />} placeholder="123456" autoFocus error={errors.totpCode?.message} {...register("totpCode")} />
         )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <Input label="Email" type="email" autoComplete="email" placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
-          <Input label="Password" type="password" autoComplete="current-password" placeholder="Enter your password" error={errors.password?.message} {...register("password")} />
-          {needsCode && (
-            <Input label="Two-factor code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="123456" autoFocus error={errors.totpCode?.message} {...register("totpCode")} />
-          )}
-          <div className="flex items-center justify-between">
-            <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">Forgot password?</Link>
-          </div>
-          <Button type="submit" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>Sign in</Button>
-        </form>
-
-        <div className="mt-6 space-y-1 text-center text-sm text-gray-500">
-          <p>New business? <Link href="/register" className="font-medium text-blue-600 hover:text-blue-700">Create one</Link></p>
-          <p>Joining a team? Use the join link your employer shared.</p>
+        <div className="flex justify-end">
+          <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700">Forgot password?</Link>
         </div>
-      </CardContent>
-    </Card>
+        <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>Sign in</Button>
+      </form>
+
+      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        <Link href="/register" className="rounded-xl border border-gray-200 p-4 transition-colors hover:border-blue-300 hover:bg-blue-50">
+          <span className="block text-sm font-semibold text-gray-900">Own a business?</span>
+          <span className="mt-0.5 block text-xs leading-5 text-gray-500">Create your business and owner account.</span>
+        </Link>
+        <div className="rounded-xl border border-dashed border-gray-200 p-4">
+          <span className="block text-sm font-semibold text-gray-900">Joining a team?</span>
+          <span className="mt-0.5 block text-xs leading-5 text-gray-500">Use the join link your employer shared.</span>
+        </div>
+      </div>
+    </div>
   )
 }

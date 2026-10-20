@@ -21,6 +21,7 @@ import { ProductFormDialog } from "@/components/pos/product-form-dialog"
 import { PaymentDialog } from "@/components/pos/payment-dialog"
 import { ReceiptDialog } from "@/components/pos/receipt-dialog"
 import { CustomerPicker } from "@/components/pos/customer-picker"
+import { PromoCodeBox } from "@/components/pos/promo-code-box"
 import { DiscountDialog, noDiscount, type DiscountState } from "@/components/pos/discount-dialog"
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -72,7 +73,7 @@ export function PosTerminal() {
 
   const customer: Customer | undefined = customers.find((c) => c.id === customerId)
   const myShift = shifts.find((s) => s.userId === user?.id && !s.closedAt)
-  const needsShift = user?.role === "cashier" && !myShift
+  const needsShift = can(user?.role, "pos.sell") && !myShift
 
   const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products])
   const visibleItems = useMemo(() => {
@@ -417,6 +418,7 @@ export function PosTerminal() {
         </div>
 
         <div className="shrink-0 border-t border-pos-line p-4">
+          {order.length > 0 && <PromoCodeBox subtotal={subtotal} discount={discount} savings={disc.promo} onChange={setDiscount} />}
           <div className="space-y-1.5 rounded-lg bg-pos-canvas p-3 text-[10px] text-pos-sub">
             <div className="flex justify-between"><span>Sub total</span><span>{formatCurrency(subtotal)}</span></div>
             {priced.discountTotal > 0 && <div className="flex justify-between text-pos-green"><span>Discount{disc.promotion ? ` (${disc.promotion.code})` : ""}</span><span>-{formatCurrency(priced.discountTotal)}</span></div>}

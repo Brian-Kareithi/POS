@@ -110,6 +110,11 @@ export async function completeSale(input: CheckoutInput): Promise<Sale> {
   const existing = useDataStore.getState().sales.find((s) => s.idempotencyKey === input.idempotencyKey)
   if (existing) return existing
 
+  const user = useAuthStore.getState().user
+  if (user && useDataStore.getState().shiftRecords.every((shift) => shift.userId !== user.id || !!shift.closedAt)) {
+    throw new Error("Open your shift before making a sale.")
+  }
+
   if (isOffline()) {
     const sale = queueOffline(input)
     notify.warning("Saved offline", "This sale will sync when you reconnect.")
