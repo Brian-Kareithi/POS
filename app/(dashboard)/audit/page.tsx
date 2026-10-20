@@ -107,7 +107,7 @@ export default function AuditLogPage() {
             <TableHeader><TableRow><TableHead>Staff</TableHead><TableHead>Actions</TableHead><TableHead>Flagged</TableHead></TableRow></TableHeader>
             <TableBody>
               {byPerson.map((p) => (
-                <TableRow key={p.name}><TableCell><span className="font-medium">{p.name}</span><span className="block text-xs text-gray-400">{p.role}</span></TableCell><TableCell>{p.actions}</TableCell><TableCell>{p.flagged ? <Badge variant="warning">{p.flagged}</Badge> : "—"}</TableCell></TableRow>
+                <TableRow key={p.name}><TableCell><span className="font-medium">{p.name}</span><span className="block text-xs text-gray-400">{p.role}</span></TableCell><TableCell>{p.actions}</TableCell><TableCell>{p.flagged ? <Badge variant="warning">{p.flagged}</Badge> : "-"}</TableCell></TableRow>
               ))}
             </TableBody>
           </Table>

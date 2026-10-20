@@ -12,9 +12,13 @@ import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { generateId, generateSKU, generateBarcode } from "@/lib/utils/generators"
+import { generateBarcode } from "@/lib/utils/generators"
+import { createProduct } from "@/lib/api/products"
+import { errorMessage } from "@/lib/api/client"
 import { TAX_RATES, UNITS } from "@/lib/constants"
 import { useAuthStore } from "@/lib/stores/auth-store"
+import { can } from "@/lib/permissions"
+import { CategoryDialog } from "@/components/pos/category-dialog"
 import { notify } from "@/lib/toast"
 import { isBarcodeTaken } from "@/lib/utils/barcode"
 import { BarcodeScanner } from "@/components/pos/barcode-scanner"
@@ -42,10 +46,11 @@ type ProductForm = z.infer<typeof productSchema>
 
 export default function NewProductPage() {
   const router = useRouter()
-  const { categories, brands, suppliers, products, addProduct, adjustStock, logAudit, business } = useDataStore()
-  const user = useAuthStore((s) => s.user)
+  const { categories, brands, suppliers, products } = useDataStore()
   const [scanning, setScanning] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [newCategory, setNewCategory] = useState(false)
+  const canAddCategory = can(useAuthStore((s) => s.user?.role), "products.edit")
 
   const { register, handleSubmit, formState: { errors }, watch, setValue, setError } = useForm<ProductForm>({
     resolver: zodResolver(productSchema),
@@ -62,36 +67,29 @@ export default function NewProductPage() {
       return
     }
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 500))
-    const id = generateId()
-    addProduct({
-      id,
-      businessId: business?.id || "",
-      name: data.name,
-      slug: data.name.toLowerCase().replace(/\s+/g, "-"),
-      sku: generateSKU(data.name, categories.find((c) => c.id === data.categoryId)?.name || ""),
-      barcode,
-      stock: 0,
-      expiryDate: data.expiryDate ? new Date(data.expiryDate).toISOString() : undefined,
-      batchNumber: data.batchNumber || undefined,
-      categoryId: data.categoryId,
-      brandId: data.brandId || undefined,
-      supplierId: data.supplierId || undefined,
-      costPrice: data.costPrice,
-      sellingPrice: data.sellingPrice,
-      taxRate: data.taxRate,
-      unit: data.unit,
-      minStock: data.minStock,
-      maxStock: data.maxStock,
-      isActive: true,
-      hasVariants: false,
-      description: data.description,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
-    logAudit("Product created", "Product", `${data.name} added (barcode ${barcode})`)
+    try {
+      await createProduct({
+        name: data.name,
+        barcode,
+        expiryDate: data.expiryDate ? new Date(data.expiryDate).toISOString() : undefined,
+        batchNumber: data.batchNumber || undefined,
+        categoryId: data.categoryId,
+        brandId: data.brandId || undefined,
+        supplierId: data.supplierId || undefined,
+        costPrice: data.costPrice,
+        sellingPrice: data.sellingPrice,
+        taxRate: data.taxRate,
+        unit: data.unit,
+        minStock: data.minStock,
+        maxStock: data.maxStock,
+        description: data.description || undefined,
+        openingStock: data.stock,
+      })
+    } catch (e) {
+      setIsLoading(false)
+      return notify.error("Could not add the product", errorMessage(e))
+    }
     notify.success("Product added", data.name)
-    if (data.stock > 0) adjustStock(id, data.stock, "Opening stock", user?.name)
     setIsLoading(false)
     router.push("/products")
   }
@@ -105,7 +103,7 @@ export default function NewProductPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input label="Product Name" error={errors.name?.message} {...register("name")} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Select label="Category" options={categories.map((c) => ({ value: c.id, label: c.name }))} placeholder="Select category" error={errors.categoryId?.message} {...register("categoryId")} />
+              <Select label="Category" options={[...categories.filter((c) => c.isActive).map((c) => ({ value: c.id, label: c.name })), ...(canAddCategory ? [{ value: "__new__", label: "+ New category" }] : [])]} placeholder="Select category" error={errors.categoryId?.message} {...register("categoryId", { onChange: (e) => { if (e.target.value === "__new__") { setValue("categoryId", ""); setNewCategory(true) } } })} />
               <Select label="Brand" options={brands.map((b) => ({ value: b.id, label: b.name }))} placeholder="Select brand" {...register("brandId")} />
             </div>
             <Select label="Supplier" options={suppliers.map((s) => ({ value: s.id, label: s.name }))} placeholder="Select supplier" {...register("supplierId")} />
@@ -122,8 +120,8 @@ export default function NewProductPage() {
             </div>
             <Textarea label="Description" {...register("description")} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Cost Price" type="number" step="0.01" error={errors.costPrice?.message} {...register("costPrice")} />
-              <Input label="Selling Price" type="number" step="0.01" error={errors.sellingPrice?.message} {...register("sellingPrice")} />
+              <Input label="Cost Price" type="number" step={100} error={errors.costPrice?.message} {...register("costPrice")} />
+              <Input label="Selling Price" type="number" step={100} error={errors.sellingPrice?.message} {...register("sellingPrice")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select label="Tax Rate" options={TAX_RATES.map((t) => ({ value: t.value, label: t.label }))} {...register("taxRate", { valueAsNumber: true })} />
@@ -141,6 +139,7 @@ export default function NewProductPage() {
           </form>
         </CardContent>
       </Card>
+      <CategoryDialog open={newCategory} onClose={() => setNewCategory(false)} onSaved={(c) => { setValue("categoryId", c.id, { shouldValidate: true }); setNewCategory(false) }} />
       <BarcodeScanner open={scanning} onClose={() => setScanning(false)} onDetected={(code) => setValue("barcode", code)} />
     </div>
   )

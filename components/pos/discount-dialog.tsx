@@ -4,9 +4,11 @@ import { useState } from "react"
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
-import { APPROVAL_PIN, CASHIER_DISCOUNT_LIMIT_PERCENT, can } from "@/lib/permissions"
+import { api, errorMessage } from "@/lib/api/client"
+import { verifyApprovalPin } from "@/lib/api/approvals"
+import { CASHIER_DISCOUNT_LIMIT_PERCENT, can } from "@/lib/permissions"
+import type { PromoRule } from "@/lib/utils/pricing"
 import { formatCurrency } from "@/lib/utils/format"
 import type { Customer } from "@/lib/types"
 import { ShieldCheck, Tag } from "lucide-react"
@@ -16,7 +18,11 @@ export interface DiscountState {
   value: number
   coupon: string
   redeem: number
+  /** The server-validated promotion or coupon behind `coupon`, used for the on-screen estimate. */
+  rule?: PromoRule
   approvedBy?: string
+  /** Single-use manager approval, sent with the sale. */
+  approvalToken?: string
 }
 
 export const noDiscount: DiscountState = { kind: "percent", value: 0, coupon: "", redeem: 0 }
@@ -35,8 +41,7 @@ export function DiscountDialog(props: Props) {
 }
 
 function Form({ subtotal, customer, current, onClose, onApply }: Props) {
-  const promotions = useDataStore((s) => s.promotions)
-  const users = useDataStore((s) => s.users)
+  const [busy, setBusy] = useState(false)
   const role = useAuthStore((s) => s.user?.role)
   const [kind, setKind] = useState(current.kind)
   const [value, setValue] = useState(current.value ? String(current.value) : "")
@@ -50,22 +55,39 @@ function Form({ subtotal, customer, current, onClose, onApply }: Props) {
   const needsApproval = pct > CASHIER_DISCOUNT_LIMIT_PERCENT && !can(role, "discount.any")
   const points = Math.min(parseInt(redeem || "0", 10) || 0, customer?.loyaltyPoints ?? 0)
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
     if (amount < 0 || (kind === "percent" && amount > 100)) return setError("That discount isn't valid.")
     if (pct > 50) return setError("Discounts above 50% aren't allowed at the till.")
-    let approvedBy = current.approvedBy
-    if (amount > 0 && needsApproval) {
-      if (pin !== APPROVAL_PIN) return setError("This discount needs a manager. Enter the manager PIN.")
-      approvedBy = (users.find((u) => u.role === "manager") ?? users.find((u) => u.role === "owner"))?.name
+    setBusy(true)
+    try {
+      let approvedBy = current.approvedBy
+      let approvalToken = current.approvalToken
+      if (amount > 0 && needsApproval) {
+        // A token is single use and expires, so ask again unless this same discount was already approved.
+        const sameAsApproved = approvalToken && current.kind === kind && current.value === amount
+        if (!sameAsApproved) {
+          if (!pin) return setError("This discount needs a manager. Enter the manager PIN.")
+          const approval = await verifyApprovalPin(pin)
+          approvedBy = approval.approver.name
+          approvalToken = approval.approvalToken
+        }
+      }
+      const code = coupon.trim().toUpperCase()
+      let rule: PromoRule | undefined
+      if (code) {
+        const res = await api<{ valid: boolean; reason?: string; type?: PromoRule["type"]; value?: number; productId?: string | null }>("/promotions/validate", { method: "POST", body: { code, subtotal } })
+        if (!res.valid || !res.type || res.value === undefined) return setError(res.reason ?? `"${code}" isn't an active promotion code.`)
+        rule = { type: res.type, value: Number(res.value), productId: res.productId ?? undefined, code }
+      }
+      const keep = amount > 0
+      onApply({ kind, value: amount, coupon: code, redeem: points, rule, approvedBy: keep ? approvedBy : undefined, approvalToken: keep ? approvalToken : undefined })
+    } catch (err) {
+      setError(errorMessage(err, "Could not apply the discount."))
+    } finally {
+      setBusy(false)
     }
-    const code = coupon.trim().toUpperCase()
-    if (code) {
-      const now = Date.now()
-      const promo = promotions.find((p) => p.code === code && p.isActive && new Date(p.startsAt).getTime() <= now && new Date(p.endsAt).getTime() >= now)
-      if (!promo) return setError(`"${code}" isn't an active promotion code.`)
-    }
-    onApply({ kind, value: amount, coupon: code, redeem: points, approvedBy: amount > 0 ? approvedBy : undefined })
   }
 
   return (
@@ -79,7 +101,7 @@ function Form({ subtotal, customer, current, onClose, onApply }: Props) {
                 <button key={id} type="button" onClick={() => setKind(id)} className={`rounded-md font-medium ${kind === id ? "bg-white text-blue-700 shadow-sm" : "text-gray-500"}`}>{text}</button>
               ))}
             </div>
-            <div className="flex-1"><Input type="number" min="0" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} placeholder="0" /></div>
+            <div className="flex-1"><Input type="number" min="0" step={kind === "percent" ? 1 : 100} value={value} onChange={(e) => setValue(e.target.value)} placeholder="0" /></div>
           </div>
           <p className="mt-1 text-xs text-gray-500">Cashiers can give up to {CASHIER_DISCOUNT_LIMIT_PERCENT}%. Anything higher needs a manager.</p>
         </div>
@@ -87,7 +109,7 @@ function Form({ subtotal, customer, current, onClose, onApply }: Props) {
         {needsApproval && amount > 0 && (
           <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
             <p className="mb-2 flex items-center gap-2 text-sm font-medium text-orange-700"><ShieldCheck className="h-4 w-4" />Manager approval needed ({pct.toFixed(0)}% off)</p>
-            <Input label="Manager PIN" type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="Demo PIN: 1234" />
+            <Input label="Manager PIN" type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="Manager's approval PIN" />
           </div>
         )}
 
@@ -105,7 +127,7 @@ function Form({ subtotal, customer, current, onClose, onApply }: Props) {
           <Button type="button" variant="secondary" onClick={() => onApply(noDiscount)}>Clear all</Button>
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button type="submit">Apply</Button>
+            <Button type="submit" isLoading={busy}>Apply</Button>
           </div>
         </div>
       </form>

@@ -19,13 +19,14 @@ import { Tabs } from "@/components/ui/tabs"
 import { ReportToolbar, useReportRange } from "@/components/reports/report-toolbar"
 import { inRange, summarize } from "@/lib/utils/analytics"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { generateId } from "@/lib/utils/generators"
+import { api, errorMessage } from "@/lib/api/client"
+import { toTransaction } from "@/lib/api/mappers"
 import { Plus, DollarSign, TrendingUp, TrendingDown, BookOpen, Wallet } from "lucide-react"
 
 const EXPENSE_CATEGORIES = ["Rent", "Salaries", "Utilities", "Transport", "Marketing", "Supplies", "Maintenance", "Petty cash", "Other"]
 
 export default function AccountingPage() {
-  const { addTransaction, products, branches, logAudit } = useDataStore()
+  const { products, branches } = useDataStore()
   const user = useAuthStore((s) => s.user)
   const { sales, transactions, label: branchLabel } = useBranchFilter()
   const state = useReportRange("month")
@@ -38,7 +39,8 @@ export default function AccountingPage() {
     const inPeriod = transactions.filter((t) => inRange(t.date, state.range))
     const sum = summarize(sales.filter((s) => inRange(s.createdAt, state.range)), products)
     const expenses = inPeriod.filter((t) => t.type === "expense")
-    const income = inPeriod.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
+    // Customer repayments settle sales already counted as revenue, so they are not extra income (same rule as the server's profit figures).
+    const income = inPeriod.filter((t) => t.type === "income" && !t.reference?.startsWith("customer:")).reduce((s, t) => s + t.amount, 0)
     const byCategory = new Map<string, number>()
     expenses.forEach((t) => byCategory.set(t.category, (byCategory.get(t.category) ?? 0) + t.amount))
     const filtered = activeTab === "all" ? inPeriod : inPeriod.filter((t) => t.type === activeTab)
@@ -47,17 +49,20 @@ export default function AccountingPage() {
 
   const netProfit = view.sum.grossProfit + view.income - view.expenseTotal
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const amount = parseFloat(form.amount)
     if (Number.isNaN(amount) || amount <= 0) return setError("Enter an amount.")
     if (!form.description.trim()) return setError("Add a short description.")
-    const now = new Date().toISOString()
-    addTransaction({
-      id: generateId(), businessId: user?.businessId ?? "", branchId: form.branchId || undefined, type: form.type as "income" | "expense",
-      category: form.category, amount, description: form.description.trim(), reference: form.reference || undefined, date: now, createdAt: now,
-    })
-    logAudit(form.type === "expense" ? "Expense recorded" : "Income recorded", "Accounting", `${form.category}: KES ${amount.toLocaleString()} (${form.description.trim()})`)
+    try {
+      const saved = toTransaction(await api("/transactions", {
+        method: "POST",
+        body: { type: form.type, category: form.category, amount, description: form.description.trim(), ...(form.reference ? { reference: form.reference } : {}), ...(form.branchId ? { branchId: form.branchId } : {}) },
+      }))
+      useDataStore.getState().upsert("transactions", saved, true)
+    } catch (err) {
+      return setError(errorMessage(err, "Could not save that."))
+    }
     notify.success(form.type === "expense" ? "Expense recorded" : "Income recorded", `${form.category} · ${formatCurrency(amount)}`)
     setShowModal(false)
     setForm({ ...form, amount: "", description: "", reference: "" })
@@ -123,7 +128,7 @@ export default function AccountingPage() {
           <Select label="Type" options={[{ value: "expense", label: "Expense" }, { value: "income", label: "Other income" }]} value={form.type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, type: e.target.value })} />
           <Select label="Category" options={EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))} value={form.category} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, category: e.target.value })} />
           <Select label="Branch" placeholder="Shared across branches" options={branches.map((b) => ({ value: b.id, label: b.name }))} value={form.branchId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, branchId: e.target.value })} />
-          <Input label="Amount (KES)" type="number" min="0" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+          <Input label="Amount (KES)" type="number" min="0" step={100} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           <Input label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <Input label="Reference (optional)" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
           {error && <p className="text-sm text-red-600">{error}</p>}

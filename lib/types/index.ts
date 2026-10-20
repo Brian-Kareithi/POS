@@ -241,6 +241,8 @@ export interface Sale {
   loyaltyEarned?: number
   loyaltyRedeemed?: number
   couponCode?: string
+  /** Set by the server once the sale has been submitted to KRA eTIMS. Placeholder references start with STUB-. */
+  etimsInvoiceNo?: string
   items?: SaleItem[]
   payments?: Payment[]
   customer?: Customer
@@ -252,6 +254,8 @@ export interface SaleItem {
   id: string
   saleId: string
   productId: string
+  /** Product name as it was when the sale was made. */
+  name?: string
   variantId?: string
   quantity: number
   unitPrice: number
@@ -274,16 +278,17 @@ export interface Payment {
 
 export type PaymentMethod = "cash" | "card" | "bank_transfer" | "mobile_money" | "credit"
 
+/** A discount code the owner hands out; a cashier enters it at the till for a percentage (or amount) off the bill. */
 export interface Coupon {
   id: string
   businessId: string
   code: string
-  type: "percentage" | "fixed"
+  type: "percent" | "fixed"
   value: number
-  minPurchase: number
-  maxUses: number
-  usedCount: number
-  expiresAt: string
+  minSpend?: number
+  usageLimit?: number
+  uses: number
+  expiresAt?: string
   isActive: boolean
 }
 
@@ -307,6 +312,8 @@ export interface Employee {
   salary?: number
   hireDate: string
   isActive: boolean
+  /** Self-registered staff wait as "pending" until the owner approves them and picks a role. Missing means approved. */
+  approval?: "pending" | "approved" | "rejected"
   user?: User
 }
 

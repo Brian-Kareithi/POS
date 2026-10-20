@@ -5,7 +5,8 @@ import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useDataStore } from "@/lib/stores/data-store"
-import { generateId } from "@/lib/utils/generators"
+import { api, errorMessage } from "@/lib/api/client"
+import { toCustomer } from "@/lib/api/mappers"
 import { formatCurrency } from "@/lib/utils/format"
 import type { Customer } from "@/lib/types"
 import { Plus, Search, UserRound } from "lucide-react"
@@ -21,7 +22,9 @@ export function CustomerPicker(props: Props) {
 }
 
 function Picker({ onClose, onSelect }: Props) {
-  const { customers, business, addCustomer, logAudit } = useDataStore()
+  const { customers } = useDataStore()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
   const [query, setQuery] = useState("")
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState("")
@@ -33,16 +36,19 @@ function Picker({ onClose, onSelect }: Props) {
     return customers.filter((c) => !q || c.name.toLowerCase().includes(q) || c.phone.replace(/\s/g, "").includes(q.replace(/\s/g, "")))
   }, [customers, query])
 
-  const create = (e: React.FormEvent) => {
+  const create = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !phone.trim()) return
-    const customer: Customer = {
-      id: generateId(), businessId: business?.id ?? "", name: name.trim(), email: "", phone: phone.trim(),
-      loyaltyPoints: 0, storeCredit: 0, creditLimit: 0, amountOwed: 0, marketingConsent: consent, isActive: true, createdAt: new Date().toISOString(),
+    setSaving(true)
+    setError("")
+    try {
+      const customer = toCustomer(await api("/customers", { method: "POST", body: { name: name.trim(), phone: phone.trim(), marketingConsent: consent } }))
+      useDataStore.getState().upsert("customers", customer)
+      onSelect(customer)
+    } catch (err) {
+      setError(errorMessage(err, "Could not save the customer."))
     }
-    addCustomer(customer)
-    logAudit("Customer created", "Customer", `${customer.name} added at the till${consent ? " (marketing consent given)" : ""}`)
-    onSelect(customer)
+    setSaving(false)
   }
 
   return (
@@ -78,9 +84,10 @@ function Picker({ onClose, onSelect }: Props) {
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
               The customer agrees to receive receipts and offers by SMS.
             </label>
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={() => setAdding(false)}>Back</Button>
-              <Button type="submit" className="flex-1">Save and select</Button>
+              <Button type="submit" className="flex-1" isLoading={saving}>Save and select</Button>
             </div>
           </form>
         )}

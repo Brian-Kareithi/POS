@@ -139,3 +139,16 @@ npm run lint    # ESLint
 ## License
 
 MIT
+
+
+## Backend connection
+
+The app talks to the Kareithi POS API (see `../Kareithi-Pos`). Set the address in `.env.local` (default `http://localhost:4000`):
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:4000
+```
+
+- Owners create a business at `/register-business`. Staff join with the link on the Staff page (`/join?business=<slug>`), wait as *pending*, and can sign in once the owner approves them.
+- All data (products, stock, sales, customers, staff, settings) is loaded from the API after sign-in and held in memory only.
+- `npm test` runs the sign-in, join-link and staff-approval tests.

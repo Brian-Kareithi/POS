@@ -1,10 +1,20 @@
 import type { Customer, Product, Promotion } from "@/lib/types"
 
+/** A promotion or coupon the server has already validated for this code. */
+export interface PromoRule {
+  type: "percent" | "fixed" | "bogo"
+  value: number
+  productId?: string
+  /** Shown next to the discount line. */
+  code: string
+}
+
 export interface DiscountInput {
   kind: "percent" | "amount"
   value: number
   coupon: string
   redeem: number
+  rule?: PromoRule
 }
 
 export interface DiscountResult {
@@ -12,7 +22,7 @@ export interface DiscountResult {
   promo: number
   loyalty: number
   total: number
-  promotion?: Promotion
+  promotion?: PromoRule
 }
 
 export function activePromotion(promotions: Promotion[], code: string, now = Date.now()): Promotion | undefined {
@@ -29,7 +39,8 @@ export function computeDiscount(
   customer?: Customer
 ): DiscountResult {
   const manual = input.kind === "percent" ? (subtotal * input.value) / 100 : input.value
-  const promotion = activePromotion(promotions, input.coupon)
+  const found = activePromotion(promotions, input.coupon)
+  const promotion: PromoRule | undefined = input.rule ?? (found ? { type: found.type, value: found.value, productId: found.productId, code: found.code } : undefined)
   let promo = 0
   if (promotion) {
     if (promotion.type === "percent") promo = (subtotal * promotion.value) / 100

@@ -71,7 +71,7 @@ export default function CustomerReportsPage() {
               <TableBody>
                 {owing.map((c) => {
                   const late = c.creditDueDate && new Date(c.creditDueDate).getTime() < now
-                  return <TableRow key={c.id}><TableCell className="font-medium">{c.name}</TableCell><TableCell>{formatCurrency(c.amountOwed ?? 0)}</TableCell><TableCell className="text-gray-500">{formatCurrency(c.creditLimit ?? 0)}</TableCell><TableCell>{c.creditDueDate ? <Badge variant={late ? "danger" : "default"}>{late ? "Overdue" : formatDate(c.creditDueDate)}</Badge> : "—"}</TableCell></TableRow>
+                  return <TableRow key={c.id}><TableCell className="font-medium">{c.name}</TableCell><TableCell>{formatCurrency(c.amountOwed ?? 0)}</TableCell><TableCell className="text-gray-500">{formatCurrency(c.creditLimit ?? 0)}</TableCell><TableCell>{c.creditDueDate ? <Badge variant={late ? "danger" : "default"}>{late ? "Overdue" : formatDate(c.creditDueDate)}</Badge> : "-"}</TableCell></TableRow>
                 })}
                 {owing.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-gray-500">Nobody owes the shop money.</TableCell></TableRow>}
               </TableBody>

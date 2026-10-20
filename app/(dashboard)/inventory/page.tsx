@@ -109,7 +109,7 @@ export default function InventoryPage() {
                   {showSplit && <TableCell className="font-medium">{getStock(product)}</TableCell>}
                   <TableCell>{formatCurrency(product.costPrice * units)}</TableCell>
                   <TableCell>
-                    {expiry === "none" ? <span className="text-gray-400">—</span> : (
+                    {expiry === "none" ? <span className="text-gray-400">-</span> : (
                       <span><Badge variant={expiry === "expired" ? "danger" : expiry === "soon" ? "warning" : "default"}>{expiry === "expired" ? "Expired" : `${days} days`}</Badge>{product.batchNumber && <span className="mt-0.5 block font-mono text-xs text-gray-400">{product.batchNumber}</span>}</span>
                     )}
                   </TableCell>

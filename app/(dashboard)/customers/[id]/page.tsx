@@ -13,13 +13,17 @@ import { Dialog } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { notify } from "@/lib/toast"
+import { api, errorMessage } from "@/lib/api/client"
+import { refresh } from "@/lib/api/sync"
+import { toTransaction } from "@/lib/api/mappers"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { ArrowLeft, Mail, Phone, MapPin, Award, CreditCard, Cake, HandCoins, MessageSquareOff, MessageSquare } from "lucide-react"
 
 const methods = [
-  { value: "Cash", label: "Cash" },
-  { value: "M-Pesa", label: "M-Pesa" },
-  { value: "Bank transfer", label: "Bank transfer" },
+  { value: "cash", label: "Cash" },
+  { value: "mobile_money", label: "M-Pesa" },
+  { value: "bank_transfer", label: "Bank transfer" },
+  { value: "card", label: "Card" },
 ]
 
 export default function CustomerDetailPage() {
@@ -29,11 +33,10 @@ export default function CustomerDetailPage() {
   const customers = useDataStore((s) => s.customers)
   const groups = useDataStore((s) => s.customerGroups)
   const sales = useDataStore((s) => s.sales)
-  const recordCustomerPayment = useDataStore((s) => s.recordCustomerPayment)
   const customer = customers.find((c) => c.id === params.id)
   const [paying, setPaying] = useState(false)
   const [amount, setAmount] = useState("")
-  const [method, setMethod] = useState("M-Pesa")
+  const [method, setMethod] = useState("mobile_money")
   const [error, setError] = useState("")
 
   if (!customer) {
@@ -47,13 +50,22 @@ export default function CustomerDetailPage() {
   const group = groups.find((g) => g.id === customer.groupId)?.name ?? "Regular"
   const spent = customerSales.reduce((sum, s) => sum + s.total, 0)
 
-  const pay = (e: React.FormEvent) => {
+  const pay = async (e: React.FormEvent) => {
     e.preventDefault()
     const value = parseFloat(amount)
     if (Number.isNaN(value) || value <= 0) return setError("Enter the amount received.")
     if (value > owed) return setError(`They only owe ${formatCurrency(owed)}.`)
-    recordCustomerPayment(customer.id, value, method)
-    notify.success("Payment recorded", `${customer.name} paid ${formatCurrency(value)} by ${method}`)
+    try {
+      await api(`/customers/${customer.id}/payments`, { method: "POST", body: { amount: value, method } })
+      await refresh.customer(customer.id)
+      try {
+        const t = await api<{ data: unknown[] }>("/transactions", { query: { limit: 5 } })
+        t.data.forEach((r) => useDataStore.getState().upsert("transactions", toTransaction(r), true))
+      } catch { /* not allowed to see the ledger: nothing to refresh */ }
+    } catch (err) {
+      return setError(errorMessage(err, "Could not record the payment."))
+    }
+    notify.success("Payment recorded", `${customer.name} paid ${formatCurrency(value)}`)
     setPaying(false)
     setAmount("")
     setError("")
@@ -93,7 +105,7 @@ export default function CustomerDetailPage() {
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div><p className="text-gray-500">Owes</p><p className={`text-xl font-bold ${owed > 0 ? "text-orange-600" : "text-gray-900"}`}>{formatCurrency(owed)}</p></div>
             <div><p className="text-gray-500">Credit limit</p><p className="text-xl font-bold text-gray-900">{formatCurrency(limit)}</p></div>
-            <div><p className="text-gray-500">Due</p><p className="text-xl font-bold text-gray-900">{owed > 0 && customer.creditDueDate ? formatDate(customer.creditDueDate) : "—"}</p>{overdue && <Badge variant="danger">Overdue</Badge>}</div>
+            <div><p className="text-gray-500">Due</p><p className="text-xl font-bold text-gray-900">{owed > 0 && customer.creditDueDate ? formatDate(customer.creditDueDate) : "-"}</p>{overdue && <Badge variant="danger">Overdue</Badge>}</div>
           </div>
           {limit > 0 && <div className="mt-4 h-2 rounded-full bg-gray-100"><div className="h-2 rounded-full bg-blue-600" style={{ width: `${Math.min(100, (owed / limit) * 100)}%` }} /></div>}
         </CardContent>
@@ -126,7 +138,7 @@ export default function CustomerDetailPage() {
       <Dialog open={paying} onClose={() => setPaying(false)} title="Record account payment" size="sm">
         <form onSubmit={pay} className="space-y-4">
           <p className="text-sm text-gray-500">{customer.name} owes {formatCurrency(owed)}.</p>
-          <Input label="Amount received (KES)" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+          <Input label="Amount received (KES)" type="number" min="0" step={100} value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
           <Select label="Paid by" options={methods} value={method} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMethod(e.target.value)} />
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setPaying(false)}>Cancel</Button><Button type="submit">Save payment</Button></div>

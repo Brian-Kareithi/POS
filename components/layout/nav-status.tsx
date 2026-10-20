@@ -1,9 +1,7 @@
 "use client"
 
-import { useEffect } from "react"
 import { Building2, Cloud, WifiOff } from "lucide-react"
 import { useBranchFilter } from "@/lib/hooks/use-branch-filter"
-import { useDataStore } from "@/lib/stores/data-store"
 import { usePosStore } from "@/lib/stores/pos-store"
 import { syncPendingSales } from "@/lib/services/checkout"
 
@@ -21,17 +19,11 @@ export function BranchSwitcher() {
   )
 }
 
-/** Shows connection state. Clicking toggles a simulated outage so offline selling can be demonstrated. */
+/** Shows connection state and how many offline sales are waiting to upload. Clicking toggles a test outage. */
 export function ConnectionStatus() {
   const offlineMode = usePosStore((s) => s.offlineMode)
   const setOfflineMode = usePosStore((s) => s.setOfflineMode)
-  const pending = useDataStore((s) => s.sales.filter((x) => x.synced === false).length)
-
-  useEffect(() => {
-    const online = () => syncPendingSales()
-    window.addEventListener("online", online)
-    return () => window.removeEventListener("online", online)
-  }, [])
+  const pending = usePosStore((s) => s.queue.length)
 
   const toggle = () => {
     if (offlineMode) {
@@ -45,7 +37,7 @@ export function ConnectionStatus() {
   return (
     <button
       onClick={toggle}
-      title={offlineMode ? "Offline demo on. Click to reconnect and sync." : "Click to simulate losing internet"}
+      title={offlineMode ? "Test offline mode is on. Click to reconnect and sync." : "Click to test offline selling"}
       className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium ${offlineMode ? "bg-orange-50 text-orange-700" : "bg-blue-50 text-blue-700"}`}
     >
       {offlineMode ? <WifiOff className="h-4 w-4" /> : <Cloud className="h-4 w-4" />}

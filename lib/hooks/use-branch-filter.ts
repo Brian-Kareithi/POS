@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useDataStore } from "@/lib/stores/data-store"
@@ -15,7 +15,13 @@ export function useBranchFilter() {
   const transactions = useDataStore((s) => s.transactions)
 
   const allowAll = can(user?.role, "branches.all")
-  const branchId = allowAll ? stored : user?.branchId ?? "all"
+  // The chosen branch is remembered between visits. If it no longer exists (deleted, or from another business),
+  // fall back to all branches, otherwise every list would look empty and every product out of stock.
+  const storedIsValid = stored === "all" || branches.some((b) => b.id === stored)
+  const branchId = allowAll ? (storedIsValid ? stored : "all") : user?.branchId ?? "all"
+  useEffect(() => {
+    if (branches.length > 0 && !storedIsValid) setBranchId("all")
+  }, [branches.length, storedIsValid, setBranchId])
   const branchSales = useMemo<Sale[]>(() => (branchId === "all" ? sales : sales.filter((s) => s.branchId === branchId)), [sales, branchId])
   const branchTransactions = useMemo<Transaction[]>(
     () => (branchId === "all" ? transactions : transactions.filter((t) => !t.branchId || t.branchId === branchId)),

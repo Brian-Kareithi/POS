@@ -8,6 +8,7 @@ import { useAuthStore } from "@/lib/stores/auth-store"
 import { APP_NAME } from "@/lib/constants"
 import { ROLE_LABELS } from "@/lib/permissions"
 import { navFor, activeHref } from "@/lib/navigation"
+import { useDataStore } from "@/lib/stores/data-store"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { LogOut, X } from "lucide-react"
 
@@ -18,6 +19,7 @@ export function Sidebar() {
   const logout = useAuthStore((s) => s.logout)
   const router = useRouter()
 
+  const pendingStaff = useDataStore((s) => s.employees.filter((e) => e.approval === "pending").length)
   const navItems = navFor(user?.role)
   const current = activeHref(pathname, navItems)
 
@@ -67,6 +69,9 @@ export function Sidebar() {
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
               {item.label}
+              {item.href === "/employees" && pendingStaff > 0 && (
+                <span aria-label={`${pendingStaff} pending requests`} className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{pendingStaff}</span>
+              )}
             </Link>
           ))}
         </nav>
@@ -74,7 +79,7 @@ export function Sidebar() {
         <div className="flex items-center gap-1 border-t border-gray-200 p-3">
           <button
             onClick={() => {
-              logout()
+              void logout()
               router.push("/login")
             }}
             className="flex min-w-0 flex-1 items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"

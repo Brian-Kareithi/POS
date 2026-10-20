@@ -13,12 +13,12 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "POS", icon: Store, permission: "pos.sell" },
   { href: "/overview", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view" },
+  { href: "/", label: "POS", icon: Store, permission: "pos.sell" },
   { href: "/products", label: "Products", icon: Package, permission: "products.view" },
   { href: "/inventory", label: "Inventory", icon: Warehouse, permission: "products.view" },
   { href: "/sales", label: "Sales", icon: ShoppingCart, permission: "sales.view" },
-  { href: "/promotions", label: "Promotions", icon: Tag, permission: "price.change" },
+  { href: "/promotions", label: "Discounts & Promotions", icon: Tag, permission: "price.change" },
   { href: "/customers", label: "Customers", icon: Users, permission: "customers.manage" },
   { href: "/insights", label: "Insights", icon: Sparkles, permission: "dashboard.view" },
   { href: "/employees/shifts", label: "Shifts & Cash", icon: Clock, permission: "shift.manage" },
@@ -45,7 +45,7 @@ const ROUTE_RULES: [string, Permission][] = [
   ["/promotions", "price.change"], ["/employees/shifts", "shift.manage"], ["/employees", "staff.view"],
   ["/accounting", "expenses.manage"], ["/reports", "reports.view"], ["/settings", "settings.manage"],
   ["/customers", "customers.manage"], ["/sales", "sales.view"], ["/inventory", "products.view"],
-  ["/products", "products.view"], ["/notifications", "shift.manage"],
+  ["/products", "products.view"], ["/categories", "products.view"], ["/notifications", "shift.manage"],
 ]
 
 export function routeAllowed(role: Role | undefined, pathname: string): boolean {

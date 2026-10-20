@@ -4,11 +4,13 @@ import { useEffect, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
 import { QRCode } from "@/components/ui/qr-code"
 import { useDataStore } from "@/lib/stores/data-store"
+import { useAuthStore } from "@/lib/stores/auth-store"
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants"
 import { useReceiptSettings, type PaperSize } from "@/lib/stores/receipt-settings"
 import { formatDateTime } from "@/lib/utils/format"
 import type { Sale } from "@/lib/types"
 
-const methodLabel: Record<string, string> = { cash: "Cash", card: "Card", mobile_money: "M-Pesa", bank_transfer: "Bank transfer", credit: "On account" }
+const methodLabel = PAYMENT_METHOD_LABELS
 const money = (n: number) => n.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 /**
@@ -20,9 +22,12 @@ export function ReceiptSlip({ sale, paper, printing }: { sale: Sale; paper?: Pap
   const settings = useReceiptSettings()
   const size = paper ?? settings.paper
   const customer = customers.find((c) => c.id === sale.customerId)
-  const cashier = users.find((u) => u.id === sale.userId)
+  const me = useAuthStore((s) => s.user)
+  const cashier = users.find((u) => u.id === sale.userId) ?? (sale.userId && sale.userId === me?.id ? me : undefined)
   const branch = branches.find((b) => b.id === sale.branchId) ?? branches[0]
   const ref = sale.receiptNumber ?? sale.orderNumber
+  // The server only stamps a real invoice number once a KRA device is connected; a placeholder is never printed as if it were real.
+  const realEtims = !!sale.etimsInvoiceNo && !sale.etimsInvoiceNo.startsWith("STUB-")
 
   return (
     <div
@@ -31,7 +36,7 @@ export function ReceiptSlip({ sale, paper, printing }: { sale: Sale; paper?: Pap
       style={{ ["--paper-w" as string]: size === "58mm" ? "58mm" : size === "80mm" ? "80mm" : "180mm" }}
     >
       <div className="r-center">
-        <p className="r-title">{business?.name ?? "Jamii Retail"}</p>
+        <p className="r-title">{business?.name ?? ""}</p>
         {branch?.name && <p>{branch.name}</p>}
         {branch?.address && <p>{branch.address}</p>}
         {branch?.phone && <p>Tel {branch.phone}</p>}
@@ -48,7 +53,7 @@ export function ReceiptSlip({ sale, paper, printing }: { sale: Sale; paper?: Pap
         const product = products.find((p) => p.id === i.productId)
         return (
           <div key={i.id} className="r-item">
-            <p>{product?.name ?? "Item"}</p>
+            <p>{i.name ?? product?.name ?? "Item"}</p>
             <p className="r-row r-muted"><span>{i.quantity} × {money(i.unitPrice)}</span><span className="r-ink">{money(i.quantity * i.unitPrice)}</span></p>
           </div>
         )
@@ -68,8 +73,12 @@ export function ReceiptSlip({ sale, paper, printing }: { sale: Sale; paper?: Pap
         <p className="r-gap">Points: +{sale.loyaltyEarned ?? 0}{sale.loyaltyRedeemed ? ` / redeemed ${sale.loyaltyRedeemed}` : ""}</p>
       ) : null}
       <div className="r-center r-gap">
-        <div className="r-qr"><QRCode value={`https://itax.kra.go.ke/etims/${ref}`} size={size === "58mm" ? 72 : 88} /></div>
-        <p className="r-muted">KRA eTIMS · CU No. {String(sale.id).slice(0, 10).toUpperCase()}</p>
+        {realEtims && (
+          <>
+            <div className="r-qr"><QRCode value={`https://itax.kra.go.ke/etims/${sale.etimsInvoiceNo}`} size={size === "58mm" ? 72 : 88} /></div>
+            <p className="r-muted">KRA eTIMS · {sale.etimsInvoiceNo}</p>
+          </>
+        )}
         {settings.terms && <p className="r-muted r-gap">{settings.terms}</p>}
         {settings.footerText && <p className="r-bold r-gap">{settings.footerText}</p>}
       </div>

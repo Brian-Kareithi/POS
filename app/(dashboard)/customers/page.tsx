@@ -17,19 +17,21 @@ import { Dialog } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { StatsCard } from "@/components/ui/stats-card"
 import { formatCurrency } from "@/lib/utils/format"
-import { generateId } from "@/lib/utils/generators"
+import { api, errorMessage } from "@/lib/api/client"
+import { toCustomer } from "@/lib/api/mappers"
+import { notify } from "@/lib/toast"
 import { Plus, Users, Award, CreditCard } from "lucide-react"
 
 const schema = z.object({
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.string().email().or(z.literal("")).optional(),
   phone: z.string().min(1),
   address: z.string().optional(),
   notes: z.string().optional(),
 })
 
 export default function CustomersPage() {
-  const { customers, addCustomer } = useDataStore()
+  const { customers } = useDataStore()
   const [search, setSearch] = useState("")
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
@@ -37,16 +39,18 @@ export default function CustomersPage() {
   const filtered = useMemo(() =>
     customers.filter((c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
+      (c.email ?? "").toLowerCase().includes(search.toLowerCase())
     ), [customers, search])
 
-  const onSubmit = (data: z.infer<typeof schema>) => {
-    addCustomer({
-      id: generateId(), businessId: "", name: data.name, email: data.email,
-      phone: data.phone, address: data.address, notes: data.notes,
-      loyaltyPoints: 0, storeCredit: 0, isActive: true, createdAt: new Date().toISOString(),
-    })
-    reset(); setShowModal(false)
+  const onSubmit = async (data: z.infer<typeof schema>) => {
+    try {
+      const body = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== "" && v !== undefined))
+      const saved = toCustomer(await api("/customers", { method: "POST", body }))
+      useDataStore.getState().upsert("customers", saved)
+      reset(); setShowModal(false)
+    } catch (e) {
+      notify.error("Could not add the customer", errorMessage(e))
+    }
   }
 
   return (
@@ -79,7 +83,7 @@ export default function CustomersPage() {
                 <TableCell>{c.phone}</TableCell>
                 <TableCell>{c.loyaltyPoints}</TableCell>
                 <TableCell>{formatCurrency(c.storeCredit)}</TableCell>
-                <TableCell className={(c.amountOwed ?? 0) > 0 ? "font-medium text-orange-600" : "text-gray-400"}>{(c.amountOwed ?? 0) > 0 ? formatCurrency(c.amountOwed ?? 0) : "—"}</TableCell>
+                <TableCell className={(c.amountOwed ?? 0) > 0 ? "font-medium text-orange-600" : "text-gray-400"}>{(c.amountOwed ?? 0) > 0 ? formatCurrency(c.amountOwed ?? 0) : "-"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

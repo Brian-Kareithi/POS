@@ -9,6 +9,8 @@ import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { can } from "@/lib/permissions"
 import { notify } from "@/lib/toast"
+import { updateProduct } from "@/lib/api/products"
+import { errorMessage } from "@/lib/api/client"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,7 +48,7 @@ const productSchema = z.object({
 export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { products, categories, brands, suppliers, updateProduct, logAudit } = useDataStore()
+  const { products, categories, brands, suppliers } = useDataStore()
   const role = useAuthStore((s) => s.user?.role)
   const canEditProduct = can(role, "products.edit")
   const canChangePrice = can(role, "price.change")
@@ -87,13 +89,17 @@ export default function ProductDetailPage() {
       return
     }
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 500))
-    const priceChanges: string[] = []
-    if (data.sellingPrice !== product.sellingPrice) priceChanges.push(`price KES ${product.sellingPrice} → KES ${data.sellingPrice}`)
-    if (data.costPrice !== product.costPrice) priceChanges.push(`cost KES ${product.costPrice} → KES ${data.costPrice}`)
-    updateProduct(product.id, { ...data, expiryDate: data.expiryDate ? new Date(data.expiryDate).toISOString() : undefined, batchNumber: data.batchNumber || undefined })
-    if (priceChanges.length) logAudit("Price changed", "Product", `${product.name}: ${priceChanges.join(", ")}`)
-    else logAudit("Product edited", "Product", `${product.name} details updated`)
+    try {
+      await updateProduct(product.id, {
+        name: data.name, categoryId: data.categoryId, brandId: data.brandId || null, supplierId: data.supplierId || null,
+        barcode: data.barcode, description: data.description || null, costPrice: data.costPrice, sellingPrice: data.sellingPrice,
+        taxRate: data.taxRate, unit: data.unit, minStock: data.minStock, maxStock: data.maxStock,
+        expiryDate: data.expiryDate ? new Date(data.expiryDate).toISOString() : null, batchNumber: data.batchNumber || null,
+      })
+    } catch (e) {
+      setIsLoading(false)
+      return notify.error("Could not save the product", errorMessage(e))
+    }
     notify.success("Product saved", product.name)
     setIsLoading(false)
     router.push("/products")
@@ -137,8 +143,8 @@ export default function ProductDetailPage() {
               {!canChangePrice && <p className="text-xs text-gray-500">Prices can only be changed by a manager or the owner.</p>}
               <Textarea label="Description" {...register("description")} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Cost Price" type="number" step="0.01" disabled={!canChangePrice} {...register("costPrice")} />
-                <Input label="Selling Price" type="number" step="0.01" disabled={!canChangePrice} {...register("sellingPrice")} />
+                <Input label="Cost Price" type="number" step={100} disabled={!canChangePrice} {...register("costPrice")} />
+                <Input label="Selling Price" type="number" step={100} disabled={!canChangePrice} {...register("sellingPrice")} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Select label="Tax Rate" options={TAX_RATES.map((t) => ({ value: t.value, label: t.label }))} {...register("taxRate", { valueAsNumber: true })} />

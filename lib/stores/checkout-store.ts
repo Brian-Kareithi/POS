@@ -1,64 +1,16 @@
 import { create } from "zustand"
-import { generateId } from "@/lib/utils/generators"
-import type { CheckoutSession, CheckoutSessionItem } from "@/lib/types"
+import { persist, createJSONStorage } from "zustand/middleware"
+import type { PublicSession } from "@/lib/api/self-checkout"
 
+/** The self-checkout session the shopper is on. It lives on the server; this only remembers which one, for this tab. */
 interface CheckoutState {
-  sessions: CheckoutSession[]
-  createSession: (items: CheckoutSessionItem[], total: number) => CheckoutSession
-  getSession: (token: string) => CheckoutSession | undefined
-  restoreSession: (session: CheckoutSession) => void
-  completeSession: (token: string) => void
-  expireSession: (token: string) => void
-  cleanupExpired: () => void
+  session: PublicSession | null
+  setSession: (session: PublicSession | null) => void
 }
 
-export const useCheckoutStore = create<CheckoutState>()((set, get) => ({
-  sessions: [],
-
-  createSession: (items, total) => {
-    const session: CheckoutSession = {
-      id: generateId(),
-      saleId: "",
-      token: generateId().replace(/-/g, "").substring(0, 12).toUpperCase(),
-      items,
-      total,
-      status: "pending",
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      createdAt: new Date().toISOString(),
-    }
-    set((s) => ({ sessions: [...s.sessions, session] }))
-    return session
-  },
-
-  getSession: (token) => {
-    return get().sessions.find((s) => s.token === token)
-  },
-
-  restoreSession: (session) => {
-    set((s) => (s.sessions.some((x) => x.token === session.token) ? s : { sessions: [...s.sessions, session] }))
-  },
-
-  completeSession: (token) => {
-    set((s) => ({
-      sessions: s.sessions.map((sess) =>
-        sess.token === token ? { ...sess, status: "completed" as const } : sess
-      ),
-    }))
-  },
-
-  expireSession: (token) => {
-    set((s) => ({
-      sessions: s.sessions.map((sess) =>
-        sess.token === token ? { ...sess, status: "expired" as const } : sess
-      ),
-    }))
-  },
-
-  cleanupExpired: () => {
-    set((s) => ({
-      sessions: s.sessions.filter(
-        (sess) => new Date(sess.expiresAt) > new Date() || sess.status === "completed"
-      ),
-    }))
-  },
-}))
+export const useCheckoutStore = create<CheckoutState>()(
+  persist(
+    (set) => ({ session: null, setSession: (session) => set({ session }) }),
+    { name: "pos-self-checkout", storage: createJSONStorage(() => sessionStorage) }
+  )
+)

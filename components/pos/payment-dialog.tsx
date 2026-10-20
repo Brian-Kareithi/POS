@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { api, errorMessage } from "@/lib/api/client"
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +15,7 @@ interface Props {
   total: number
   customer?: Customer
   busy?: boolean
+  branchId?: string
   onClose: () => void
   onComplete: (result: { payments: PaymentInput[]; cashTendered?: number }) => void
 }
@@ -31,9 +33,12 @@ export function PaymentDialog(props: Props) {
   return props.open ? <PaymentForm {...props} /> : null
 }
 
-type Stk = { state: "idle" } | { state: "pending"; phone: string; amount: number } | { state: "failed"; message: string }
+type Stk = { state: "idle" } | { state: "sending" } | { state: "pending"; id: string; phone: string; amount: number } | { state: "failed"; message: string }
+interface MpesaPayment { id: string; status: "pending" | "completed" | "failed" | "refunded"; resultDesc: string | null }
+/** The server's M-Pesa test mode lets a developer play the customer. It does not exist against real Safaricom. */
+const SHOW_SIMULATOR = process.env.NODE_ENV !== "production"
 
-function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
+function PaymentForm({ total, customer, busy, branchId, onClose, onComplete }: Props) {
   const [payments, setPayments] = useState<PaymentInput[]>([])
   const [method, setMethod] = useState<Method>("cash")
   const [amount, setAmount] = useState("")
@@ -64,7 +69,31 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
     setError("")
   }
 
-  const addPayment = () => {
+  // While a prompt is on the customer's phone, ask the server for the result every few seconds.
+  const pendingId = stk.state === "pending" ? stk.id : null
+  const pendingAmount = stk.state === "pending" ? stk.amount : 0
+  useEffect(() => {
+    if (!pendingId) return
+    let stopped = false
+    const poll = async () => {
+      try {
+        const mp = await api<MpesaPayment>(`/payments/mpesa/${pendingId}`)
+        if (stopped) return
+        if (mp.status === "completed") {
+          // The sale references the confirmed M-Pesa payment by its id.
+          push({ method: "mobile_money", amount: pendingAmount, reference: pendingId })
+          setStk({ state: "idle" })
+        } else if (mp.status === "failed") {
+          setStk({ state: "failed", message: mp.resultDesc || "The M-Pesa request was cancelled or failed." })
+        }
+      } catch { /* try again on the next tick */ }
+    }
+    const timer = setInterval(poll, 3000)
+    return () => { stopped = true; clearInterval(timer) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingId])
+
+  const addPayment = async () => {
     if (remaining <= 0) return
     if (target <= 0) return setError("Enter an amount.")
     if (method === "cash") {
@@ -77,19 +106,25 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
     if (method === "mobile_money") {
       if (!/^(\+?254|0)[17]\d{8}$/.test(phone.replace(/\s/g, ""))) return setError("Enter a valid Safaricom number, e.g. 0712 345 678.")
       setError("")
-      return setStk({ state: "pending", phone, amount: target })
+      setStk({ state: "sending" })
+      try {
+        const mp = await api<MpesaPayment>("/payments/mpesa/stk", { method: "POST", body: { phone: phone.replace(/s/g, ""), amount: target, ...(branchId ? { branchId } : {}) } })
+        setStk({ state: "pending", id: mp.id, phone, amount: target })
+      } catch (e) {
+        setStk({ state: "idle" })
+        setError(errorMessage(e, "Could not send the M-Pesa request."))
+      }
+      return
     }
     push({ method, amount: target, reference: reference.trim() || undefined })
   }
 
-  const resolveStk = (outcome: "paid" | "cancelled" | "insufficient") => {
+  const simulate = async (success: boolean) => {
     if (stk.state !== "pending") return
-    if (outcome === "paid") {
-      const code = `S${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 9e7 + 1e7)}K`
-      push({ method: "mobile_money", amount: stk.amount, reference: code })
-      setStk({ state: "idle" })
-    } else {
-      setStk({ state: "failed", message: outcome === "cancelled" ? "The customer cancelled the request on their phone." : "The M-Pesa balance was too low. Try a smaller amount or another method." })
+    try {
+      await api(`/payments/mpesa/${stk.id}/simulate`, { method: "POST", body: { success } })
+    } catch (e) {
+      setError(errorMessage(e, "Could not simulate the customer."))
     }
   }
 
@@ -136,8 +171,8 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
               ))}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Input label={method === "mobile_money" ? "Amount to request" : "Amount"} type="number" min="0" step="0.01" value={amount === "" ? String(remaining) : amount} onChange={(e) => setAmount(e.target.value)} />
-              {method === "cash" && <Input label="Cash received" type="number" min="0" value={received} onChange={(e) => setReceived(e.target.value)} placeholder={String(Math.ceil(target))} />}
+              <Input label={method === "mobile_money" ? "Amount to request" : "Amount"} type="number" min="0" step={100} value={amount === "" ? String(remaining) : amount} onChange={(e) => setAmount(e.target.value)} />
+              {method === "cash" && <Input label="Cash received" type="number" min="0" step={100} value={received} onChange={(e) => setReceived(e.target.value)} placeholder={String(Math.ceil(target))} />}
               {method === "mobile_money" && <Input label="Customer phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0712 345 678" />}
               {(method === "card" || method === "bank_transfer") && <Input label={method === "card" ? "Approval code (optional)" : "Reference (optional)"} value={reference} onChange={(e) => setReference(e.target.value)} />}
             </div>
@@ -160,16 +195,21 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
           </>
         )}
 
+        {stk.state === "sending" && (
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"><Loader2 className="h-4 w-4 animate-spin" />Sending the M-Pesa request…</div>
+        )}
         {stk.state === "pending" && (
           <div className="space-y-3 rounded-xl border border-green-200 bg-green-50 p-4 text-center">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-green-600" />
             <p className="text-sm font-medium text-green-800">M-Pesa request for {formatCurrency(stk.amount)} sent to {stk.phone}</p>
-            <p className="text-xs text-green-700">Waiting for the customer to enter their PIN. Demo controls:</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button size="sm" onClick={() => resolveStk("paid")}><CheckCircle2 className="h-4 w-4" />Customer paid</Button>
-              <Button size="sm" variant="secondary" onClick={() => resolveStk("cancelled")}>Cancelled</Button>
-              <Button size="sm" variant="secondary" onClick={() => resolveStk("insufficient")}>Insufficient funds</Button>
-            </div>
+            <p className="text-xs text-green-700">Waiting for the customer to enter their PIN. This screen updates by itself.</p>
+            {SHOW_SIMULATOR && (
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button size="sm" onClick={() => simulate(true)}><CheckCircle2 className="h-4 w-4" />Test mode: customer paid</Button>
+                <Button size="sm" variant="secondary" onClick={() => simulate(false)}>Test mode: customer declined</Button>
+              </div>
+            )}
+            <Button size="sm" variant="secondary" onClick={() => setStk({ state: "idle" })}>Cancel request</Button>
           </div>
         )}
         {stk.state === "failed" && (
@@ -183,7 +223,7 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
         {remaining > 0 && customer && (
           <p className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${canUseAccount ? "bg-gray-50 text-gray-600" : "bg-orange-50 text-orange-700"}`}>
             <UserRound className="h-4 w-4" />
-            {customer.name}: credit available {formatCurrency(available)}{canUseAccount ? " — you can put the balance on their account." : " — not enough to cover the balance."}
+            {customer.name}: credit available {formatCurrency(available)}{canUseAccount ? " - you can put the balance on their account." : " - not enough to cover the balance."}
           </p>
         )}
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -193,7 +233,7 @@ function PaymentForm({ total, customer, busy, onClose, onComplete }: Props) {
           {remaining === 0 ? (
             <Button className="flex-1" size="lg" onClick={finish} isLoading={busy}>Complete sale</Button>
           ) : (
-            <Button className="flex-1" size="lg" disabled={!canUseAccount || stk.state === "pending" || busy} onClick={finish} isLoading={busy}>
+            <Button className="flex-1" size="lg" disabled={!canUseAccount || stk.state === "pending" || stk.state === "sending" || busy} onClick={finish} isLoading={busy}>
               Put {formatCurrency(remaining)} on account
             </Button>
           )}

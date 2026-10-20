@@ -7,6 +7,7 @@ import { useDataStore } from "@/lib/stores/data-store"
 import { usePosStore } from "@/lib/stores/pos-store"
 import { formatCurrency } from "@/lib/utils/format"
 import { generateId } from "@/lib/utils/generators"
+import { api, errorMessage } from "@/lib/api/client"
 import { expiryStatus, daysToExpiry, getBranchStock } from "@/lib/utils/stock"
 import { findProductByCode } from "@/lib/utils/barcode"
 import { computeDiscount } from "@/lib/utils/pricing"
@@ -38,7 +39,7 @@ export function PosTerminal() {
   const promotions = useDataStore((state) => state.promotions)
   const shifts = useDataStore((state) => state.shiftRecords)
   const branches = useDataStore((state) => state.branches)
-  const { held, hold, resume, discardHeld, offlineMode } = usePosStore()
+  const { held, hold, resume, discardHeld, offlineMode, loadHeld } = usePosStore()
 
   const [activeCategory, setActiveCategory] = useState("all")
   const [search, setSearch] = useState("")
@@ -118,7 +119,11 @@ export function PosTerminal() {
     if (product.image) return
     const image = await fetchProductImage(product.barcode, product.name)
     if (!image) return
-    useDataStore.getState().updateProduct(product.id, { image })
+    // Only people who may edit products can save the photo on the server; for everyone else it is just shown this session.
+    if (can(user?.role, "products.edit")) {
+      try { await api(`/products/${product.id}`, { method: "PATCH", body: { image } }) } catch { return }
+    }
+    useDataStore.getState().patch("products", product.id, { image })
     setOrder((current) => current.map((line) => (line.product.id === product.id ? { ...line, product: { ...line.product, image } } : line)))
   }
 
@@ -165,32 +170,41 @@ export function PosTerminal() {
     keyRef.current = generateId()
   }
 
-  const holdOrder = () => {
+  // Held sales live on the server so they follow the cashier between devices.
+  useEffect(() => {
+    if (can(user?.role, "pos.sell") && products.length > 0) loadHeld(products).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role, products.length > 0])
+
+  const holdOrder = async () => {
     if (!order.length) return
-    hold({
-      id: generateId(),
+    try {
+      await hold({
       label: `Hold ${held.length + 1}${customer ? ` · ${customer.name}` : ""}`,
       customerId,
       lines: order,
       discountKind: discount.kind,
       discountValue: discount.value,
       couponCode: discount.coupon,
-      heldAt: new Date().toISOString(),
       heldBy: user?.name ?? "Staff",
-    })
-    resetOrder()
-    notify.info("Sale put on hold", "Resume it any time from the Held button.")
+      })
+      resetOrder()
+      notify.info("Sale put on hold", "Resume it any time from the Held button.")
+    } catch (error) {
+      notify.error("Could not hold the sale", errorMessage(error))
+    }
   }
 
-  const resumeHeld = (id: string) => {
+  const resumeHeld = async (id: string) => {
     const h = held.find((x) => x.id === id)
     if (!h) return
-    if (order.length) holdOrder()
-    resume(id)
+    if (order.length) await holdOrder()
+    try { await resume(id) } catch (error) { return notify.error("Could not resume the sale", errorMessage(error)) }
     // Re-check against live stock in case it changed while the sale was on hold.
     setOrder(h.lines.map((l) => ({ ...l, product: products.find((p) => p.id === l.product.id) ?? l.product })))
     setCustomerId(h.customerId)
     setDiscount({ kind: h.discountKind, value: h.discountValue, coupon: h.couponCode, redeem: 0 })
+    // A held sale's coupon is checked again when the sale is saved, so no stale rule is kept here.
     setHeldOpen(false)
   }
 
@@ -201,29 +215,31 @@ export function PosTerminal() {
     setPayOpen(true)
   }
 
-  const finishPayment = (result: { payments: PaymentInput[]; cashTendered?: number }) => {
+  const finishPayment = async (result: { payments: PaymentInput[]; cashTendered?: number }) => {
     if (busy) return
     setBusy(true)
     try {
-      const sale = completeSale({
+      const sale = await completeSale({
         lines: order,
         payments: result.payments,
         cashTendered: result.cashTendered,
         customerId,
-        discountTotal: disc.total,
-        couponCode: disc.promotion?.code,
+        branchId: here || undefined,
+        manualDiscount: { kind: discount.kind, value: discount.value },
+        couponCode: discount.coupon || undefined,
         loyaltyRedeemed: disc.loyalty || undefined,
+        approvalToken: discount.approvalToken,
         approvedBy: discount.approvedBy,
+        estimatedDiscount: disc.total,
         idempotencyKey: keyRef.current,
       })
-      if (disc.promotion) useDataStore.getState().updatePromotion(disc.promotion.id, { uses: disc.promotion.uses + 1 })
       setPayOpen(false)
       setReceipt(sale)
       resetOrder()
       setOrderOpen(false)
       setNotice("")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Something went wrong."
+      const message = errorMessage(error, "Something went wrong.")
       setPayError(message)
       notify.error("Sale not completed", `${message} Nothing was charged.`)
     } finally {
@@ -232,12 +248,21 @@ export function PosTerminal() {
   }
 
   // Keyboard shortcuts for fast checkout.
-  const shortcuts = useRef({ openCharge, holdOrder })
+  // Ctrl+Q: start a fresh sale. A sale in progress is put on hold first, so nothing is lost.
+  const newSale = async () => {
+    if (order.length) await holdOrder()
+    else resetOrder()
+    setNotice("")
+    setWarning("")
+    searchRef.current?.focus()
+  }
+  const shortcuts = useRef({ openCharge, holdOrder, newSale })
   useEffect(() => {
-    shortcuts.current = { openCharge, holdOrder }
+    shortcuts.current = { openCharge, holdOrder, newSale }
   })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "q") { e.preventDefault(); void shortcuts.current.newSale(); return }
       if (e.key === "F2") { e.preventDefault(); searchRef.current?.focus() }
       if (e.key === "F4") { e.preventDefault(); shortcuts.current.openCharge() }
       if (e.key === "F6") { e.preventDefault(); shortcuts.current.holdOrder() }
@@ -281,8 +306,8 @@ export function PosTerminal() {
             <Link href="/employees/shifts" className="flex items-center gap-1.5 rounded-full bg-pos-warn-bg px-3 py-1 font-medium text-pos-warn-text"><Clock size={13} />{needsShift ? "Open your shift to start selling" : "No shift open"}</Link>
           )}
           {branchName && branches.length > 1 && <span className="rounded-full bg-white px-3 py-1 font-medium text-pos-sub">Selling at {branchName}</span>}
-          {offlineMode && <span className="flex items-center gap-1.5 rounded-full bg-pos-warn-bg px-3 py-1 font-medium text-pos-warn-text"><WifiOff size={13} />Offline — sales are saved on this device</span>}
-          <span className="ml-auto hidden text-pos-muted xl:block">F2 search · F4 charge · F6 hold · F8 customer · F9 discount</span>
+          {offlineMode && <span className="flex items-center gap-1.5 rounded-full bg-pos-warn-bg px-3 py-1 font-medium text-pos-warn-text"><WifiOff size={13} />Offline - sales are saved on this device</span>}
+          <span className="ml-auto hidden text-pos-muted xl:block">Ctrl+Q new sale · F2 search · F4 charge · F6 hold · F8 customer · F9 discount</span>
         </div>
 
         {warning && (
@@ -412,7 +437,7 @@ export function PosTerminal() {
       />
       <CustomerPicker open={customerOpen} onClose={() => setCustomerOpen(false)} onSelect={(c) => { setCustomerId(c?.id); setCustomerOpen(false) }} />
       <DiscountDialog open={discountOpen} subtotal={subtotal} customer={customer} current={discount} onClose={() => setDiscountOpen(false)} onApply={(state) => { setDiscount(state); setDiscountOpen(false) }} />
-      <PaymentDialog open={payOpen} total={priced.total} customer={customer} busy={busy} onClose={() => setPayOpen(false)} onComplete={finishPayment} />
+      <PaymentDialog open={payOpen} total={priced.total} customer={customer} busy={busy} branchId={here || undefined} onClose={() => setPayOpen(false)} onComplete={finishPayment} />
       <ReceiptDialog sale={receipt} onClose={() => setReceipt(null)} />
       <Dialog open={heldOpen} onClose={() => setHeldOpen(false)} title="Held sales" size="md">
         <div className="space-y-2">
@@ -425,7 +450,7 @@ export function PosTerminal() {
               </div>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => resumeHeld(h.id)}>Resume</Button>
-                <Button size="sm" variant="secondary" onClick={() => discardHeld(h.id)}>Discard</Button>
+                <Button size="sm" variant="secondary" onClick={() => discardHeld(h.id).catch((e) => notify.error("Could not discard", errorMessage(e)))}>Discard</Button>
               </div>
             </div>
           ))}

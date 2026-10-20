@@ -17,7 +17,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getStock } from "@/lib/utils/stock"
 import { summarize } from "@/lib/utils/analytics"
 import { formatCurrency } from "@/lib/utils/format"
-import { generateId } from "@/lib/utils/generators"
+import { errorMessage } from "@/lib/api/client"
+import { createPurchaseOrder } from "@/lib/api/purchasing"
 import type { PurchaseOrder } from "@/lib/types"
 import { AlertTriangle, CalendarDays, Clock, Sparkles, TrendingUp } from "lucide-react"
 
@@ -26,7 +27,7 @@ const COVER_DAYS = 21
 
 export default function InsightsPage() {
   const now = useNow()
-  const { products, sales, suppliers, warehouses, purchaseOrders, addPurchaseOrder, logAudit } = useDataStore()
+  const { products, sales, suppliers, warehouses, purchaseOrders } = useDataStore()
   const user = useAuthStore((s) => s.user)
 
   const view = useMemo(() => {
@@ -79,26 +80,26 @@ export default function InsightsPage() {
   const canOrder = can(user?.role, "purchase.manage")
   const openOrders = purchaseOrders.filter((o) => o.status === "pending" || o.status === "approved").length
 
-  const createOrders = () => {
+  const createOrders = async () => {
+    if (!warehouses[0]) return notify.error("Add a warehouse first", "Purchase orders are delivered to a warehouse.")
     const bySupplier = new Map<string, typeof view.reorder>()
     view.reorder.forEach((f) => {
       const key = f.product.supplierId ?? suppliers[0]?.id ?? ""
       bySupplier.set(key, [...(bySupplier.get(key) ?? []), f])
     })
     let n = 0
-    bySupplier.forEach((list, supplierId) => {
-      const id = generateId()
-      const items = list.map((f) => ({ id: generateId(), purchaseOrderId: id, productId: f.product.id, quantity: f.suggest, received: 0, unitPrice: f.product.costPrice, total: f.product.costPrice * f.suggest }))
-      const order: PurchaseOrder = {
-        id, businessId: user?.businessId ?? "", supplierId, warehouseId: warehouses[0]?.id ?? "", orderNumber: `PO-${3300 + purchaseOrders.length + n}`,
-        status: "pending", total: items.reduce((s, i) => s + i.total, 0), notes: "Suggested by Insights", items, createdBy: user?.id ?? "",
-        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    for (const [supplierId, list] of bySupplier) {
+      try {
+        await createPurchaseOrder({
+          supplierId, warehouseId: warehouses[0].id, notes: "Suggested by Insights",
+          items: list.map((f) => ({ productId: f.product.id, quantity: f.suggest, unitPrice: f.product.costPrice })),
+        })
+        n++
+      } catch (err) {
+        notify.error("Could not create an order", errorMessage(err))
       }
-      addPurchaseOrder(order)
-      logAudit("Purchase order created", "Purchase order", `${order.orderNumber} suggested by Insights (${formatCurrency(order.total)})`)
-      n++
-    })
-    notify.success(`${n} purchase order${n === 1 ? "" : "s"} created`, "Review and approve them under Inventory → Purchase Orders.")
+    }
+    if (n) notify.success(`${n} purchase order${n === 1 ? "" : "s"} created`, "Review and approve them under Inventory → Purchase Orders.")
   }
 
   const growth = view.last7 > 0 ? ((view.next7 - view.last7) / view.last7) * 100 : 0
@@ -110,8 +111,8 @@ export default function InsightsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatsCard title="Running out within 14 days" value={view.reorder.length.toString()} icon={AlertTriangle} changeType={view.reorder.length ? "negative" : "positive"} change={view.reorder.length ? "Reorder soon" : "Stock looks healthy"} />
         <StatsCard title="Forecast, next 7 days" value={formatCurrency(view.next7)} icon={TrendingUp} change={`${growth >= 0 ? "+" : ""}${growth.toFixed(0)}% vs last 7 days`} changeType={growth >= 0 ? "positive" : "negative"} />
-        <StatsCard title="Busiest day" value={view.bestDay?.label ?? "—"} icon={CalendarDays} change={view.bestDay ? `${formatCurrency(view.bestDay.average)} on average` : undefined} />
-        <StatsCard title="Peak hour" value={view.peakHour !== undefined ? `${view.peakHour}:00` : "—"} icon={Clock} change="Schedule your strongest cashiers here" />
+        <StatsCard title="Busiest day" value={view.bestDay?.label ?? "-"} icon={CalendarDays} change={view.bestDay ? `${formatCurrency(view.bestDay.average)} on average` : undefined} />
+        <StatsCard title="Peak hour" value={view.peakHour !== undefined ? `${view.peakHour}:00` : "-"} icon={Clock} change="Schedule your strongest cashiers here" />
       </div>
 
       <Card>
@@ -181,7 +182,7 @@ export default function InsightsPage() {
               {view.slow.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-gray-500">Everything is selling at a healthy pace.</TableCell></TableRow>}
             </TableBody>
           </Table>
-          {view.slow.length > 0 && can(user?.role, "price.change") && <div className="border-t border-gray-100 px-6 py-3 text-sm"><Link href="/promotions" className="text-blue-600 hover:underline">Create a promotion →</Link></div>}
+          {view.slow.length > 0 && can(user?.role, "price.change") && <div className="border-t border-gray-100 px-6 py-3 text-sm"><Link href="/promotions" className="text-blue-600 hover:underline">Create a discount or promotion →</Link></div>}
         </CardContent>
       </Card>
     </div>

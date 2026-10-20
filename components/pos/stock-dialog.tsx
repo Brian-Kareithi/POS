@@ -9,6 +9,8 @@ import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { getBranchStock } from "@/lib/utils/stock"
 import { notify } from "@/lib/toast"
+import { api, errorMessage } from "@/lib/api/client"
+import { refresh } from "@/lib/api/sync"
 import type { Product } from "@/lib/types"
 
 const reasons = ["Stock count correction", "Received from supplier", "Damaged goods", "Expired", "Theft/loss", "Returned to stock", "Other"]
@@ -18,7 +20,6 @@ export function StockDialog({ product, onClose }: { product: Product | null; onC
 }
 
 function StockForm({ product, onClose }: { product: Product; onClose: () => void }) {
-  const setStock = useDataStore((s) => s.setStock)
   const branches = useDataStore((s) => s.branches)
   const user = useAuthStore((s) => s.user)
   const branchIds = branches.map((b) => b.id)
@@ -32,12 +33,23 @@ function StockForm({ product, onClose }: { product: Product; onClose: () => void
   const amount = parseInt(value, 10)
   const next = Number.isNaN(amount) ? current : mode === "add" ? current + amount : amount
 
-  const submit = (e: React.FormEvent) => {
+  const [saving, setSaving] = useState(false)
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (Number.isNaN(amount)) return setError("Enter a number.")
     if (next < 0) return setError("Stock can't go below zero.")
     if (next === current) return setError("That doesn't change the stock.")
-    setStock(product.id, next, reason, user?.name ?? "Staff", branchId)
+    setSaving(true)
+    try {
+      if (mode === "add") await api("/inventory/adjust", { method: "POST", body: { productId: product.id, branchId, change: amount, reason } })
+      else await api("/inventory/set", { method: "POST", body: { productId: product.id, branchId, quantity: next, reason } })
+      await Promise.all([refresh.product(product.id), refresh.adjustments().catch(() => {})])
+    } catch (err) {
+      setSaving(false)
+      return setError(errorMessage(err, "Could not update the stock."))
+    }
+    setSaving(false)
     notify.success("Stock updated", `${product.name}: ${current} → ${next}`)
     onClose()
   }
@@ -58,7 +70,7 @@ function StockForm({ product, onClose }: { product: Product; onClose: () => void
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit">Save</Button>
+          <Button type="submit" isLoading={saving}>Save</Button>
         </div>
       </form>
     </Dialog>

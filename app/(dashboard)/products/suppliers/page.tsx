@@ -13,18 +13,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Plus } from "lucide-react"
-import { generateId } from "@/lib/utils/generators"
+import { createRecord } from "@/lib/api/crud"
+import { toSupplier, toWarehouse } from "@/lib/api/mappers"
 
 const schema = z.object({ name: z.string().min(1), contactPerson: z.string().min(1), email: z.string().email(), phone: z.string().min(1), address: z.string().optional() })
 
 export default function SuppliersPage() {
-  const { suppliers, addSupplier } = useDataStore()
+  const { suppliers } = useDataStore()
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: z.infer<typeof schema>) => {
-    addSupplier({ id: generateId(), businessId: "", ...data, address: data.address || "", isActive: true, createdAt: new Date().toISOString() })
-    reset(); setShowModal(false)
+  const onSubmit = async (data: z.infer<typeof schema>) => {
+    if (await createRecord("/suppliers", "suppliers", { name: data.name, contactPerson: data.contactPerson, email: data.email, phone: data.phone, address: data.address }, "supplier", toSupplier)) { reset(); setShowModal(false) }
   }
 
   return (

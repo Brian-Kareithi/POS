@@ -1,54 +1,41 @@
 "use client"
 
-import { useEffect, useMemo } from "react"
+import { useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { QRCode } from "@/components/ui/qr-code"
 import { useCartStore } from "@/lib/stores/cart-store"
 import { useCheckoutStore } from "@/lib/stores/checkout-store"
+import { useKioskSession } from "@/lib/hooks/use-kiosk-session"
+import { selfCheckout } from "@/lib/api/self-checkout"
 import { ShoppingCart, Scan, CreditCard } from "lucide-react"
 
 export default function SelfCheckoutPage() {
-  const cart = useCartStore()
-  const sessions = useCheckoutStore((s) => s.sessions)
-  const items = cart.items
+  const router = useRouter()
+  const items = useCartStore((s) => s.items)
+  const { session, error, creating } = useKioskSession()
 
+  // While the shopper pays on their phone, watch for the sale to be created.
   useEffect(() => {
-    useCheckoutStore.getState().cleanupExpired()
-    const cartState = useCartStore.getState()
-    if (cartState.items.length === 0) return
-    const total = cartState.getTotal()
-    const count = cartState.items.length
-    const hasPending = useCheckoutStore
-      .getState()
-      .sessions.some((s) => s.status === "pending" && Math.abs(s.total - total) < 0.01 && s.items.length === count)
-    if (!hasPending) {
-      useCheckoutStore.getState().createSession(cartState.getCheckoutItems(), total)
-    }
-  }, [items])
+    if (!session || session.status !== "pending") return
+    const timer = setInterval(async () => {
+      try {
+        const s = await selfCheckout.get(session.token)
+        if (s.status === "completed") {
+          useCheckoutStore.getState().setSession(s)
+          useCartStore.getState().clearCart()
+          router.push("/self-checkout/receipt")
+        } else if (s.status === "expired") {
+          useCheckoutStore.getState().setSession(null)
+        }
+      } catch { /* try again */ }
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [session, router])
 
-  const session = useMemo(() => {
-    const total = useCartStore.getState().getTotal()
-    const count = items.length
-    return (
-      sessions.find((s) => s.status === "pending" && Math.abs(s.total - total) < 0.01 && s.items.length === count) ||
-      null
-    )
-  }, [sessions, items])
-
-  const checkoutUrl = useMemo(() => {
-    if (!session) return ""
-    const payload = encodeURIComponent(
-      JSON.stringify({
-        items: session.items,
-        total: session.total,
-        expiresAt: session.expiresAt,
-      })
-    )
-    const origin = typeof window !== "undefined" ? window.location.origin : ""
-    return `${origin}/checkout/${session.token}?payload=${payload}`
-  }, [session])
+  const checkoutUrl = session && typeof window !== "undefined" ? `${window.location.origin}/checkout/${session.token}` : ""
 
   return (
     <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
@@ -66,8 +53,12 @@ export default function SelfCheckoutPage() {
                   <QRCode value={checkoutUrl} size={176} />
                 </div>
                 <p className="text-sm text-gray-500 mb-1">Scan this QR code with your phone to pay</p>
-                <p className="text-xs text-gray-400">Session: {session?.token}</p>
+                <p className="text-xs text-gray-400">Total {session ? session.total.toLocaleString("en-KE", { style: "currency", currency: "KES" }) : ""}</p>
               </>
+            ) : items.length > 0 ? (
+              <div className="py-8" role={error ? "alert" : "status"}>
+                <p className={`text-sm ${error ? "text-red-600" : "text-gray-500"}`}>{error || (creating ? "Getting your total…" : "Preparing checkout…")}</p>
+              </div>
             ) : (
               <div className="py-8">
                 <ShoppingCart className="h-12 w-12 mx-auto mb-3 text-gray-300" />
@@ -99,8 +90,8 @@ export default function SelfCheckoutPage() {
         </div>
 
         <Link href="/self-checkout/payment">
-          <Button className="w-full" size="lg" disabled={items.length === 0}>
-            <CreditCard className="h-5 w-5" />Proceed to Payment
+          <Button className="w-full" size="lg" disabled={items.length === 0 || !session}>
+            <CreditCard className="h-5 w-5" />Pay here with M-Pesa
           </Button>
         </Link>
       </div>

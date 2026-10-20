@@ -13,18 +13,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Plus } from "lucide-react"
-import { generateId } from "@/lib/utils/generators"
+import { api, errorMessage } from "@/lib/api/client"
+import { notify } from "@/lib/toast"
+import type { CustomerGroup } from "@/lib/types"
 
 const schema = z.object({ name: z.string().min(1), discountPercent: z.coerce.number().min(0).max(100) })
 
 export default function CustomerGroupsPage() {
-  const { customerGroups, addCustomerGroup } = useDataStore()
+  const { customerGroups } = useDataStore()
   const [showModal, setShowModal] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = (data: z.infer<typeof schema>) => {
-    addCustomerGroup({ id: generateId(), businessId: "", name: data.name, discountPercent: data.discountPercent, isActive: true })
-    reset(); setShowModal(false)
+  const onSubmit = async (data: z.infer<typeof schema>) => {
+    try {
+      const saved = await api<CustomerGroup>("/customer-groups", { method: "POST", body: { name: data.name, discountPercent: data.discountPercent } })
+      useDataStore.getState().upsert("customerGroups", saved)
+      reset(); setShowModal(false)
+    } catch (e) {
+      notify.error("Could not add the group", errorMessage(e))
+    }
   }
 
   return (
@@ -45,7 +52,7 @@ export default function CustomerGroupsPage() {
       <Dialog open={showModal} onClose={() => setShowModal(false)} title="Add Customer Group" size="sm">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label="Group Name" error={errors.name?.message as string} {...register("name")} />
-          <Input label="Discount (%)" type="number" error={errors.discountPercent?.message as string} {...register("discountPercent", { valueAsNumber: true })} />
+          <Input label="Discount (%)" type="number" step={1} error={errors.discountPercent?.message as string} {...register("discountPercent", { valueAsNumber: true })} />
           <div className="flex justify-end gap-3"><Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button><Button type="submit">Save</Button></div>
         </form>
       </Dialog>

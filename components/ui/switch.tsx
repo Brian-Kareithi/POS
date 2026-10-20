@@ -9,16 +9,18 @@ interface SwitchProps {
   disabled?: boolean
   className?: string
   label?: string
+  "aria-label"?: string
 }
 
 const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
-  ({ checked, onChange, disabled, className, label }, ref) => {
+  ({ checked, onChange, disabled, className, label, "aria-label": ariaLabel }, ref) => {
     return (
       <label className={cn("inline-flex items-center gap-2 cursor-pointer", disabled && "cursor-not-allowed opacity-50", className)}>
         <button
           ref={ref}
           type="button"
           role="switch"
+          aria-label={ariaLabel ?? label}
           aria-checked={checked}
           disabled={disabled}
           onClick={() => onChange?.(!checked)}

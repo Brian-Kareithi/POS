@@ -15,6 +15,11 @@ export const PAYMENT_METHODS = [
   { value: "credit", label: "Customer Credit" },
 ] as const
 
+/** Customer-facing wording for each payment method, used on receipts, sales lists and the dashboard. */
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: "Cash", card: "Card", mobile_money: "M-Pesa", bank_transfer: "Bank transfer", credit: "On account",
+}
+
 export const SALE_STATUSES = [
   { value: "pending", label: "Pending" },
   { value: "completed", label: "Completed" },

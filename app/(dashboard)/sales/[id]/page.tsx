@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { can } from "@/lib/permissions"
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants"
 import { refundSale } from "@/lib/services/checkout"
 import { notify } from "@/lib/toast"
 import { PageHeader } from "@/components/ui/page-header"
@@ -21,7 +22,7 @@ import { ArrowLeft, Printer, RefreshCw, ShoppingCart, Receipt, User, CreditCard,
 
 const refundReasons = ["Damaged item", "Wrong item", "Customer changed mind", "Expired product", "Pricing error"]
 const voidReasons = ["Wrong item scanned", "Duplicate sale", "Customer left without paying", "Cashier error"]
-const methodLabel: Record<string, string> = { cash: "Cash", card: "Card", mobile_money: "M-Pesa", bank_transfer: "Bank transfer", credit: "On account" }
+const methodLabel = PAYMENT_METHOD_LABELS
 
 export default function SaleDetailPage() {
   const params = useParams()
@@ -53,12 +54,9 @@ export default function SaleDetailPage() {
   }
 
   const needsApproval = !can(user?.role, "refund.issue")
-  const confirm = ({ reason, approvedBy }: { reason: string; approvedBy?: string }) => {
-    try {
-      refundSale(sale.id, action ?? "refund", reason, approvedBy)
-    } catch (error) {
-      notify.error("Couldn't complete that", error instanceof Error ? error.message : undefined)
-    }
+  const confirm = async ({ reason, approvalToken }: { reason: string; approvalToken?: string }) => {
+    // Errors are shown inside the dialog, which stays open until the server accepts the change.
+    await refundSale(sale.id, action ?? "refund", reason, approvalToken)
     setAction(null)
   }
 
@@ -92,8 +90,8 @@ export default function SaleDetailPage() {
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2"><Receipt className="h-4 w-4 text-gray-400" />Order Details</p>
           <div className="flex justify-between text-sm"><span className="text-gray-500">Receipt</span><span className="font-medium">{sale.receiptNumber ?? sale.orderNumber}</span></div>
           <div className="flex justify-between text-sm"><span className="text-gray-500">Status</span><Badge variant={statusVariant}>{sale.status}</Badge></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Served by</span><span>{cashier?.name ?? "—"}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Branch</span><span>{branch?.name ?? "—"}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-gray-500">Served by</span><span>{cashier?.name ?? "-"}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-gray-500">Branch</span><span>{branch?.name ?? "-"}</span></div>
         </CardContent></Card>
         <Card><CardContent className="py-4 space-y-2">
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2"><User className="h-4 w-4 text-gray-400" />Customer</p>

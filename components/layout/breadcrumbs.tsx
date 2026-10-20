@@ -37,7 +37,7 @@ const labelMap: Record<string, string> = {
   "notifications": "Notifications",
   "audit": "Audit Log",
   "insights": "Insights",
-  "promotions": "Promotions",
+  "promotions": "Discounts & Promotions",
   "overview": "Dashboard",
 }
 

@@ -26,7 +26,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             </div>
           )}
           <input
-            ref={ref}
+            ref={(el) => {
+              // A step is only for the up/down arrows. Without this the browser would call 150 invalid when the arrows move by 100.
+              if (el && props.type === "number" && props.step) el.form?.setAttribute("novalidate", "")
+              if (typeof ref === "function") ref(el)
+              else if (ref) ref.current = el
+            }}
             id={inputId}
             className={cn(
               "block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-50",

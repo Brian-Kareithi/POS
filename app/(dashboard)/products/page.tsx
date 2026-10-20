@@ -15,11 +15,13 @@ import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
 import { formatCurrency } from "@/lib/utils/format"
 import { getStock, expiryStatus, daysToExpiry } from "@/lib/utils/stock"
+import { updateProduct } from "@/lib/api/products"
+import { errorMessage } from "@/lib/api/client"
 import { exportCSV } from "@/lib/utils/export"
 import { Plus, Package, MoreHorizontal, Edit, Archive, ArchiveRestore, Download } from "lucide-react"
 
 export default function ProductsPage() {
-  const { products, categories, updateProduct, logAudit } = useDataStore()
+  const { products, categories } = useDataStore()
   const role = useAuthStore((s) => s.user?.role)
   const canEdit = can(role, "products.edit")
   const [search, setSearch] = useState("")
@@ -39,11 +41,14 @@ export default function ProductsPage() {
   const getCategoryName = (id: string) => categories.find((c) => c.id === id)?.name || "N/A"
   const archivedCount = products.filter((p) => !p.isActive).length
 
-  const toggleArchive = (id: string) => {
+  const toggleArchive = async (id: string) => {
     const product = products.find((p) => p.id === id)
     if (!product) return
-    updateProduct(id, { isActive: !product.isActive })
-    logAudit(product.isActive ? "Product archived" : "Product restored", "Product", `${product.name} ${product.isActive ? "archived. It no longer appears at the till" : "restored to the catalog"}`)
+    try {
+      await updateProduct(id, { isActive: !product.isActive })
+    } catch (e) {
+      return notify.error("Could not update the product", errorMessage(e))
+    }
     notify.success(product.isActive ? "Product archived" : "Product restored", product.name)
     setShowActions(null)
   }
@@ -119,7 +124,7 @@ export default function ProductsPage() {
                       <TableCell>{formatCurrency(product.sellingPrice)}</TableCell>
                       <TableCell><Badge variant={stock === 0 ? "danger" : stock <= product.minStock ? "warning" : "success"}>{stock}</Badge></TableCell>
                       <TableCell>
-                        {expiry === "none" ? <span className="text-gray-400">—</span> : (
+                        {expiry === "none" ? <span className="text-gray-400">-</span> : (
                           <Badge variant={expiry === "expired" ? "danger" : expiry === "soon" ? "warning" : "default"}>{expiry === "expired" ? "Expired" : `${days} days`}</Badge>
                         )}
                       </TableCell>

@@ -14,7 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Plus, ArrowRight } from "lucide-react"
-import { generateId } from "@/lib/utils/generators"
+import { errorMessage } from "@/lib/api/client"
+import { createTransfer, moveTransfer } from "@/lib/api/purchasing"
 import { getBranchStock } from "@/lib/utils/stock"
 import { formatDateTime } from "@/lib/utils/format"
 import type { StockTransfer } from "@/lib/types"
@@ -24,9 +25,10 @@ const variant: Record<StockTransfer["status"], "default" | "success" | "warning"
 }
 
 export default function TransfersPage() {
-  const { stockTransfers, products, branches, warehouses, setStockTransfers, addStockTransfer, transferStock, logAudit } = useDataStore()
+  const { stockTransfers, products, branches } = useDataStore()
+  const [busy, setBusy] = useState<string | null>(null)
   const user = useAuthStore((s) => s.user)
-  const canApprove = can(user?.role, "price.change")
+  const canApprove = can(user?.role, "branches.all")
   const canMove = can(user?.role, "stock.edit")
   const [open, setOpen] = useState(false)
   const [from, setFrom] = useState("")
@@ -37,12 +39,20 @@ export default function TransfersPage() {
   const [error, setError] = useState("")
 
   const ids = branches.map((b) => b.id)
-  const branchName = (id?: string) => branches.find((b) => b.id === id)?.name ?? "—"
+  const branchName = (id?: string) => branches.find((b) => b.id === id)?.name ?? "-"
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "Item"
-  const setStatus = (id: string, status: StockTransfer["status"]) =>
-    setStockTransfers(stockTransfers.map((t) => (t.id === id ? { ...t, status, updatedAt: new Date().toISOString() } : t)))
+  const step = async (t: StockTransfer, action: "approve" | "complete" | "cancel", done: [string, string?]) => {
+    setBusy(t.id)
+    try {
+      await moveTransfer(t.id, action)
+      notify.success(done[0], done[1])
+    } catch (err) {
+      notify.error("That didn't work", errorMessage(err))
+    }
+    setBusy(null)
+  }
 
-  const create = (e: React.FormEvent) => {
+  const create = async (e: React.FormEvent) => {
     e.preventDefault()
     const qty = parseInt(quantity, 10)
     const product = products.find((p) => p.id === productId)
@@ -51,24 +61,22 @@ export default function TransfersPage() {
     if (!(qty > 0)) return setError("Enter a quantity.")
     const available = getBranchStock(product, from, ids)
     if (qty > available) return setError(`${branchName(from)} only has ${available} of ${product.name}.`)
-    addStockTransfer({
-      id: generateId(), businessId: user?.businessId ?? "", fromWarehouseId: warehouses[0]?.id ?? "", toWarehouseId: warehouses[0]?.id ?? "",
-      fromBranchId: from, toBranchId: to, productId, quantity: qty, status: "pending", notes: notes || undefined,
-      createdBy: user?.id ?? "", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-    })
-    logAudit("Transfer requested", "Transfer", `${qty} × ${product.name}: ${branchName(from)} → ${branchName(to)}`)
+    setBusy("create")
+    try {
+      await createTransfer({ fromBranchId: from, toBranchId: to, productId, quantity: qty, notes: notes || undefined })
+    } catch (err) {
+      setBusy(null)
+      return setError(errorMessage(err, "Could not request the transfer."))
+    }
+    setBusy(null)
     notify.success("Transfer requested", `${qty} × ${product.name} to ${branchName(to)}`)
     setOpen(false)
     setNotes("")
     setError("")
   }
 
-  const complete = (t: StockTransfer) => {
-    if (!t.fromBranchId || !t.toBranchId) return
-    transferStock(t.productId, t.fromBranchId, t.toBranchId, t.quantity)
-    setStatus(t.id, "completed")
-    notify.success("Transfer completed", `${t.quantity} × ${productName(t.productId)} moved to ${branchName(t.toBranchId)}`)
-  }
+  const complete = (t: StockTransfer) =>
+    step(t, "complete", ["Transfer completed", `${t.quantity} × ${productName(t.productId)} moved to ${branchName(t.toBranchId)}`])
 
   return (
     <div className="space-y-6">
@@ -90,9 +98,9 @@ export default function TransfersPage() {
                 <TableCell className="text-gray-500">{formatDateTime(t.createdAt)}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    {t.status === "pending" && canApprove && <Button size="sm" variant="secondary" onClick={() => { setStatus(t.id, "approved"); logAudit("Transfer approved", "Transfer", `${t.quantity} × ${productName(t.productId)} to ${branchName(t.toBranchId)}`) }}>Approve</Button>}
-                    {t.status === "approved" && canMove && <Button size="sm" onClick={() => complete(t)}>Mark delivered</Button>}
-                    {(t.status === "pending" || t.status === "approved") && canMove && <Button size="sm" variant="secondary" onClick={() => setStatus(t.id, "cancelled")}>Cancel</Button>}
+                    {t.status === "pending" && canApprove && <Button size="sm" variant="secondary" isLoading={busy === t.id} onClick={() => step(t, "approve", ["Transfer approved"])}>Approve</Button>}
+                    {t.status === "approved" && canMove && <Button size="sm" isLoading={busy === t.id} onClick={() => complete(t)}>Mark delivered</Button>}
+                    {(t.status === "pending" || t.status === "approved") && canMove && <Button size="sm" variant="secondary" onClick={() => step(t, "cancel", ["Transfer cancelled"])}>Cancel</Button>}
                   </div>
                 </TableCell>
               </TableRow>

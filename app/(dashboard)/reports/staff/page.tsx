@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { useDataStore } from "@/lib/stores/data-store"
 import { useBranchFilter } from "@/lib/hooks/use-branch-filter"
-import { ROLE_LABELS } from "@/lib/permissions"
+import { ROLE_LABELS, isApproved } from "@/lib/permissions"
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { StatsCard } from "@/components/ui/stats-card"
@@ -19,7 +19,7 @@ export default function StaffReportsPage() {
   const { sales, label: branchLabel } = useBranchFilter()
   const state = useReportRange("30d")
 
-  const rows = useMemo(() => employees.map((e) => {
+  const rows = useMemo(() => employees.filter(isApproved).map((e) => {
     const user = users.find((u) => u.id === e.userId)
     const mine = sales.filter((s) => s.userId === e.userId && inRange(s.createdAt, state.range))
     const sum = summarize(mine, products)
@@ -46,7 +46,7 @@ export default function StaffReportsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatsCard title="Staff" value={rows.length.toString()} icon={Users} />
         <StatsCard title="Monthly payroll" value={formatCurrency(payroll)} icon={DollarSign} />
-        <StatsCard title="Top seller" value={best && best.net > 0 ? best.name.split(" ")[0] : "—"} icon={UserCog} change={best && best.net > 0 ? formatCurrency(best.net) : undefined} />
+        <StatsCard title="Top seller" value={best && best.net > 0 ? best.name.split(" ")[0] : "-"} icon={UserCog} change={best && best.net > 0 ? formatCurrency(best.net) : undefined} />
         <StatsCard title="Flagged actions" value={flaggedTotal.toString()} icon={ShieldAlert} changeType={flaggedTotal ? "negative" : "positive"} change="See the audit log for details" />
       </div>
 
@@ -61,11 +61,11 @@ export default function StaffReportsPage() {
                   <TableCell><span className="font-medium">{r.name}</span><span className="block text-xs text-gray-400">{ROLE_LABELS[r.role]}</span></TableCell>
                   <TableCell>{r.transactions}</TableCell>
                   <TableCell>{formatCurrency(r.net)}</TableCell>
-                  <TableCell>{r.transactions ? formatCurrency(r.basket) : "—"}</TableCell>
+                  <TableCell>{r.transactions ? formatCurrency(r.basket) : "-"}</TableCell>
                   <TableCell>{formatCurrency(r.discounts)}</TableCell>
-                  <TableCell>{r.refunds || "—"}</TableCell>
-                  <TableCell>{r.variance === 0 ? "—" : <Badge variant={r.variance < 0 ? "danger" : "warning"}>{r.variance > 0 ? "+" : ""}{r.variance.toLocaleString()}</Badge>}</TableCell>
-                  <TableCell>{r.flagged ? <Badge variant="warning">{r.flagged}</Badge> : "—"}</TableCell>
+                  <TableCell>{r.refunds || "-"}</TableCell>
+                  <TableCell>{r.variance === 0 ? "-" : <Badge variant={r.variance < 0 ? "danger" : "warning"}>{r.variance > 0 ? "+" : ""}{r.variance.toLocaleString()}</Badge>}</TableCell>
+                  <TableCell>{r.flagged ? <Badge variant="warning">{r.flagged}</Badge> : "-"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

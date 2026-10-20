@@ -1,27 +1,13 @@
 import type { Product } from "@/lib/types"
 
-// Fictional on-hand stock, derived from the SKU so it stays stable between loads.
+/** Units on hand, as counted by the server. */
 export function getStock(product: Product): number {
-  if (typeof product.stock === "number") return product.stock
-  const hash = [...product.sku].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 9973, 7)
-  return hash % 7 === 0 ? Math.max(0, product.minStock - 3) : product.minStock + 15 + (hash % 120)
+  return product.stock ?? 0
 }
 
-/** Units per branch. Products that have never been split get 65% at the first (main) branch and the rest shared across the others. */
-export function branchStockMap(product: Product, branchIds: string[]): Record<string, number> {
-  if (product.branchStock) return product.branchStock
-  const total = getStock(product)
-  const map: Record<string, number> = {}
-  if (branchIds.length === 0) return map
-  const first = branchIds.length === 1 ? total : Math.round(total * 0.65)
-  map[branchIds[0]] = first
-  const others = branchIds.slice(1)
-  const rest = total - first
-  others.forEach((id, i) => {
-    const share = Math.floor(rest / others.length)
-    map[id] = i === others.length - 1 ? rest - share * (others.length - 1) : share
-  })
-  return map
+/** Units per branch id, as counted by the server. Their sum is `product.stock`. */
+export function branchStockMap(product: Product, _branchIds: string[] = []): Record<string, number> {
+  return product.branchStock ?? {}
 }
 
 export function getBranchStock(product: Product, branchId: string, branchIds: string[]): number {

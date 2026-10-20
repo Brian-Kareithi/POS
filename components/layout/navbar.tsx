@@ -14,7 +14,7 @@ import {
   Settings, ChevronDown, ShoppingCart
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useKeyboardShortcut } from "@/lib/hooks/use-keyboard-shortcut"
 
 export function Navbar() {
@@ -24,15 +24,17 @@ export function Navbar() {
   const [showProfile, setShowProfile] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
 
+  // On the till itself, the till handles Ctrl+Q (it also has to deal with the sale in progress).
   const startNewSale = useCallback(() => {
-    if (can(user?.role, "pos.sell")) router.push("/sales/new")
-  }, [router, user?.role])
+    if (pathname !== "/" && can(user?.role, "pos.sell")) router.push("/")
+  }, [router, user?.role, pathname])
 
   useKeyboardShortcut("q", startNewSale, { ctrl: true })
 
   const handleLogout = () => {
-    logout()
+    void logout()
     router.push("/login")
   }
 

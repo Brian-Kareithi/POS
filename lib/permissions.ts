@@ -37,8 +37,11 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
 
 /** A cashier may give up to this discount without a manager's approval. */
 export const CASHIER_DISCOUNT_LIMIT_PERCENT = 5
-/** Demo approval PIN for managers and the owner. */
-export const APPROVAL_PIN = "1234"
+
+/** Staff who registered themselves can't sign in or appear on the team until the owner approves them. */
+export function isApproved(employee: { approval?: "pending" | "approved" | "rejected" }): boolean {
+  return !employee.approval || employee.approval === "approved"
+}
 
 export function can(role: Role | undefined, permission: Permission): boolean {
   return typeof role === "string" && Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS, role)

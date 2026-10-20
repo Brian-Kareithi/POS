@@ -36,10 +36,10 @@ export default function SalesReturnsPage() {
   const totalRefunded = refunded.reduce((sum, s) => sum + s.total, 0)
   const sale = sales.find((s) => s.id === target)
 
-  const confirm = ({ reason, approvedBy }: { reason: string; approvedBy?: string }) => {
+  const confirm = async ({ reason, approvalToken }: { reason: string; approvalToken?: string }) => {
     if (!target) return
     try {
-      refundSale(target, "refund", reason, approvedBy)
+      await refundSale(target, "refund", reason, approvalToken)
     } catch (error) {
       notify.error("Couldn't complete that", error instanceof Error ? error.message : undefined)
     }
@@ -75,8 +75,8 @@ export default function SalesReturnsPage() {
                 <TableCell className="font-medium"><Link href={`/sales/${s.id}`} className="text-blue-600 hover:text-blue-700">{s.receiptNumber ?? s.orderNumber}</Link></TableCell>
                 <TableCell>{customerName(s.customerId)}</TableCell>
                 <TableCell>{formatCurrency(s.total)}</TableCell>
-                <TableCell className="text-gray-500">{s.refundReason ?? s.voidReason ?? "—"}</TableCell>
-                <TableCell className="text-gray-500">{s.approvedBy ?? "—"}</TableCell>
+                <TableCell className="text-gray-500">{s.refundReason ?? s.voidReason ?? "-"}</TableCell>
+                <TableCell className="text-gray-500">{s.approvedBy ?? "-"}</TableCell>
                 <TableCell><Badge variant="danger">{s.status === "cancelled" ? "voided" : "refunded"}</Badge></TableCell>
                 <TableCell className="text-gray-500">{formatDateTime(s.createdAt)}</TableCell>
               </TableRow>

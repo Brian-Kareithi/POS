@@ -1,17 +1,16 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { api } from "@/lib/api/client"
+import { notify } from "@/lib/toast"
 
 export type PaperSize = "58mm" | "80mm" | "a4"
 
-interface ReceiptSettings {
-  headerText: string
-  footerText: string
-  terms: string
-  kraPin: string
-  paper: PaperSize
-  /** Open the print dialog automatically after each completed sale. */
-  autoPrint: boolean
-  update: (changes: Partial<Omit<ReceiptSettings, "update">>) => void
+type Fields = { headerText: string; footerText: string; terms: string; kraPin: string; paper: PaperSize; autoPrint: boolean }
+
+interface ReceiptSettings extends Fields {
+  /** Replace the settings with what the server holds (does not save). */
+  hydrate: (server: Fields) => void
+  /** Change settings locally and save them to the server shortly after the last edit. */
+  update: (changes: Partial<Fields>) => void
 }
 
 export const PAPER_LABELS: Record<PaperSize, string> = {
@@ -20,17 +19,29 @@ export const PAPER_LABELS: Record<PaperSize, string> = {
   a4: "A4 sheet",
 }
 
-export const useReceiptSettings = create<ReceiptSettings>()(
-  persist(
-    (set) => ({
-      headerText: "Thank you for shopping with us!",
-      footerText: "Asante, karibu tena!",
-      terms: "Goods once sold may be returned within 7 days with this receipt.",
-      kraPin: "P051234567X",
-      paper: "80mm",
-      autoPrint: false,
-      update: (changes) => set(changes),
-    }),
-    { name: "pos-receipt-settings" }
-  )
-)
+let timer: ReturnType<typeof setTimeout> | undefined
+let pending: Partial<Fields> = {}
+
+export const useReceiptSettings = create<ReceiptSettings>()((set) => ({
+  headerText: "",
+  footerText: "",
+  terms: "",
+  kraPin: "",
+  paper: "80mm",
+  autoPrint: false,
+  hydrate: (s) => set({ headerText: s.headerText, footerText: s.footerText, terms: s.terms, kraPin: s.kraPin, paper: s.paper, autoPrint: s.autoPrint }),
+  update: (changes) => {
+    set(changes)
+    pending = { ...pending, ...changes }
+    clearTimeout(timer)
+    timer = setTimeout(async () => {
+      const body = pending
+      pending = {}
+      try {
+        await api("/settings/receipts", { method: "PATCH", body })
+      } catch (e) {
+        notify.error("Receipt settings were not saved", e instanceof Error ? e.message : undefined)
+      }
+    }, 600)
+  },
+}))

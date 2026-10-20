@@ -15,7 +15,8 @@ import { Dialog } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, PackageCheck } from "lucide-react"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { generateId } from "@/lib/utils/generators"
+import { errorMessage } from "@/lib/api/client"
+import { createPurchaseOrder, approvePurchaseOrder, receivePurchaseOrder } from "@/lib/api/purchasing"
 import type { PurchaseOrder, PurchaseOrderItem } from "@/lib/types"
 
 const statusVariant: Record<PurchaseOrder["status"], "default" | "success" | "warning" | "danger" | "info"> = {
@@ -25,10 +26,11 @@ const statusVariant: Record<PurchaseOrder["status"], "default" | "success" | "wa
 type Line = { productId: string; quantity: string }
 
 export default function PurchaseOrdersPage() {
-  const { purchaseOrders, suppliers, warehouses, products, setPurchaseOrders, addPurchaseOrder, adjustStock, logAudit } = useDataStore()
+  const { purchaseOrders, suppliers, warehouses, products } = useDataStore()
+  const [busy, setBusy] = useState<string | null>(null)
   const user = useAuthStore((s) => s.user)
   const canManage = can(user?.role, "purchase.manage")
-  const canApprove = can(user?.role, "price.change")
+  const canApprove = can(user?.role, "branches.all")
   const [open, setOpen] = useState(false)
   const [supplierId, setSupplierId] = useState("")
   const [warehouseId, setWarehouseId] = useState("")
@@ -36,46 +38,51 @@ export default function PurchaseOrdersPage() {
   const [error, setError] = useState("")
 
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "Item"
-  const supplierName = (id: string) => suppliers.find((s) => s.id === id)?.name ?? "—"
+  const supplierName = (id: string) => suppliers.find((s) => s.id === id)?.name ?? "-"
 
-  const update = (id: string, changes: Partial<PurchaseOrder>) =>
-    setPurchaseOrders(purchaseOrders.map((o) => (o.id === id ? { ...o, ...changes, updatedAt: new Date().toISOString() } : o)))
-
-  const create = (e: React.FormEvent) => {
+  const create = async (e: React.FormEvent) => {
     e.preventDefault()
     const valid = lines.filter((l) => l.productId && parseInt(l.quantity, 10) > 0)
     if (!supplierId || !warehouseId) return setError("Choose a supplier and a warehouse.")
     if (valid.length === 0) return setError("Add at least one product with a quantity.")
-    const id = generateId()
-    const items: PurchaseOrderItem[] = valid.map((l) => {
-      const product = products.find((p) => p.id === l.productId)!
-      const quantity = parseInt(l.quantity, 10)
-      return { id: generateId(), purchaseOrderId: id, productId: product.id, quantity, received: 0, unitPrice: product.costPrice, total: product.costPrice * quantity }
-    })
-    const order: PurchaseOrder = {
-      id, businessId: user?.businessId ?? "", supplierId, warehouseId, orderNumber: `PO-${3200 + purchaseOrders.length}`,
-      status: "pending", total: items.reduce((s, i) => s + i.total, 0), items, createdBy: user?.id ?? "",
-      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    let order: PurchaseOrder
+    setBusy("create")
+    try {
+      order = await createPurchaseOrder({
+        supplierId, warehouseId,
+        items: valid.map((l) => ({ productId: l.productId, quantity: parseInt(l.quantity, 10), unitPrice: products.find((p) => p.id === l.productId)?.costPrice ?? 0 })),
+      })
+    } catch (err) {
+      setBusy(null)
+      return setError(errorMessage(err, "Could not create the order."))
     }
-    addPurchaseOrder(order)
-    logAudit("Purchase order created", "Purchase order", `${order.orderNumber} to ${supplierName(supplierId)} for ${formatCurrency(order.total)}`)
+    setBusy(null)
     notify.success("Purchase order created", `${order.orderNumber} · ${formatCurrency(order.total)}`)
     setOpen(false)
     setLines([{ productId: "", quantity: "24" }])
     setError("")
   }
 
-  const approve = (order: PurchaseOrder) => {
-    update(order.id, { status: "approved" })
-    logAudit("Purchase order approved", "Purchase order", `${order.orderNumber} approved (${formatCurrency(order.total)})`)
-    notify.success("Order approved", order.orderNumber)
+  const approve = async (order: PurchaseOrder) => {
+    setBusy(order.id)
+    try {
+      await approvePurchaseOrder(order.id)
+      notify.success("Order approved", order.orderNumber)
+    } catch (err) {
+      notify.error("Could not approve", errorMessage(err))
+    }
+    setBusy(null)
   }
 
-  const receive = (order: PurchaseOrder) => {
-    order.items?.forEach((i) => adjustStock(i.productId, i.quantity - i.received, `Goods received · ${order.orderNumber}`, user?.name))
-    update(order.id, { status: "received", items: order.items?.map((i) => ({ ...i, received: i.quantity })) })
-    logAudit("Goods received", "Purchase order", `${order.orderNumber} received from ${supplierName(order.supplierId)}`)
-    notify.success("Goods received", `${order.orderNumber}: stock levels updated`)
+  const receive = async (order: PurchaseOrder) => {
+    setBusy(order.id)
+    try {
+      await receivePurchaseOrder(order)
+      notify.success("Goods received", `${order.orderNumber}: stock levels updated`)
+    } catch (err) {
+      notify.error("Could not receive the goods", errorMessage(err))
+    }
+    setBusy(null)
   }
 
   return (
@@ -99,8 +106,8 @@ export default function PurchaseOrdersPage() {
                 <TableCell className="text-gray-500">{formatDateTime(o.createdAt)}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    {o.status === "pending" && canApprove && <Button size="sm" variant="secondary" onClick={() => approve(o)}>Approve</Button>}
-                    {o.status === "approved" && canManage && <Button size="sm" onClick={() => receive(o)}><PackageCheck className="h-3.5 w-3.5" />Receive goods</Button>}
+                    {o.status === "pending" && canApprove && <Button size="sm" variant="secondary" isLoading={busy === o.id} onClick={() => approve(o)}>Approve</Button>}
+                    {o.status === "approved" && canManage && <Button size="sm" isLoading={busy === o.id} onClick={() => receive(o)}><PackageCheck className="h-3.5 w-3.5" />Receive goods</Button>}
                   </div>
                 </TableCell>
               </TableRow>
@@ -127,7 +134,7 @@ export default function PurchaseOrdersPage() {
             <Button type="button" variant="secondary" size="sm" onClick={() => setLines((all) => [...all, { productId: "", quantity: "24" }])}><Plus className="h-3.5 w-3.5" />Add product</Button>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit">Create order</Button></div>
+          <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" isLoading={busy === "create"}>Create order</Button></div>
         </form>
       </Dialog>
     </div>

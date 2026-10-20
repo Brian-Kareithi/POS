@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants"
 import { getStock, daysToExpiry, expiryStatus } from "@/lib/utils/stock"
 import {
   change, dailySeries, expensesTotal, inRange, paymentBreakdown, periodRanges, productStats, salesIn, summarize, txIn,
@@ -33,9 +34,7 @@ const PERIODS: { id: Period; label: string }[] = [
 const METHOD_COLOR: Record<string, string> = {
   cash: "var(--series-1)", card: "var(--series-2)", mobile_money: "var(--series-3)", bank_transfer: "var(--series-4)", credit: "var(--series-5)",
 }
-const METHOD_LABEL: Record<string, string> = {
-  cash: "Cash", card: "Card", mobile_money: "M-Pesa", bank_transfer: "Bank transfer", credit: "On credit",
-}
+const METHOD_LABEL = PAYMENT_METHOD_LABELS
 
 const kes = (n: number) => `KES ${Math.round(n).toLocaleString()}`
 const compact = (n: number) => (Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(Math.round(n)))

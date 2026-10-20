@@ -6,6 +6,7 @@ import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useBranchFilter } from "@/lib/hooks/use-branch-filter"
 import { can } from "@/lib/permissions"
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
 import { SearchInput } from "@/components/ui/search-input"
@@ -17,7 +18,7 @@ import { formatCurrency, formatDateTime } from "@/lib/utils/format"
 import { exportCSV } from "@/lib/utils/export"
 import { ShoppingCart, DollarSign, RefreshCw, FileText, Download, HandCoins, WifiOff } from "lucide-react"
 
-const methodLabel: Record<string, string> = { cash: "Cash", card: "Card", mobile_money: "M-Pesa", bank_transfer: "Bank transfer", credit: "On account" }
+const methodLabel = PAYMENT_METHOD_LABELS
 const FILTERS = [
   { id: "all", label: "All" },
   { id: "completed", label: "Completed" },
@@ -38,7 +39,7 @@ export default function SalesPage() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all")
 
   const customerName = (id?: string) => customers.find((c) => c.id === id)?.name ?? "Walk-in"
-  const cashierName = (id: string) => users.find((u) => u.id === id)?.name ?? "—"
+  const cashierName = (id: string) => users.find((u) => u.id === id)?.name ?? "-"
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
