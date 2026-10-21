@@ -10,6 +10,7 @@ import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useBranchFilter } from "@/lib/hooks/use-branch-filter"
 import { PageHeader } from "@/components/ui/page-header"
+import { ShiftShortcut } from "@/components/layout/shift-shortcut"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -150,6 +151,7 @@ export default function OverviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={`${greeting}, ${user?.name.split(" ")[0] ?? "there"}`} description={`${branchLabel} · ${view.label} compared with ${suffix}`}>
+        <ShiftShortcut />
         <div className="flex rounded-lg bg-gray-100 p-1 text-sm" role="tablist" aria-label="Period">
           {PERIODS.map((p) => (
             <button key={p.id} role="tab" aria-selected={period === p.id} onClick={() => setPeriod(p.id)} className={`rounded-md px-3 py-1.5 font-medium ${period === p.id ? "bg-white text-blue-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>{p.label}</button>

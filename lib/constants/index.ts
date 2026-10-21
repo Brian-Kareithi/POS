@@ -85,3 +85,10 @@ export const SIDEBAR_ITEMS = [
   { href: "/reports", label: "Reports", icon: "BarChart3", roles: ["owner"] },
   { href: "/settings", label: "Settings", icon: "Settings", roles: ["owner"] },
 ] as const
+
+/**
+ * The platform's own logo. It is the only logo shown on the sign-in and sign-up screens (a business must never see another
+ * business's logo there), and the fallback in the portal for a business that has not uploaded one.
+ * To change it, replace public/brand/logo.png (a square PNG, at least 256x256, works best).
+ */
+export const PLATFORM_LOGO = "/brand/logo.png"

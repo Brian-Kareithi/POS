@@ -22,7 +22,8 @@ const SELLER: Permission[] = ["pos.sell", "sales.view", "discount.small", "produ
 
 // Mirrors src/auth/permissions.ts on the server, which is the one that actually enforces. This copy only decides what to show.
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  owner: ALL,
+  // the owner never clocks in: they work whenever they need to, so their hours are not tracked
+  owner: ALL.filter((p) => p !== "time.clock"),
   manager: ALL.filter((p) => !["staff.manage", "settings.manage", "backup.manage", "deliveries.fulfil", "hours.manage"].includes(p)),
   cashier: [...SELLER, "records.view", "records.manage"],
   stockkeeper: ["products.view", "products.edit", "stock.edit", "purchase.manage", "deliveries.view", "deliveries.load", "records.view", "time.clock"],
@@ -37,6 +38,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   technician: ["products.view", "customers.manage", "records.view", "records.manage", "time.clock"],
   instructor: ["customers.manage", "records.view", "records.manage", "time.clock"],
   front_desk: [...SELLER, "records.view", "records.manage"],
+  admin: [],
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -55,6 +57,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   technician: "Technician / Mechanic",
   instructor: "Instructor / Teacher",
   front_desk: "Front desk / Receptionist",
+  admin: "Super admin",
 }
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
@@ -73,6 +76,7 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   technician: "Works on assigned jobs and work orders.",
   instructor: "Handles classes, students and their records.",
   front_desk: "Greets customers, books, checks in and takes payments.",
+  admin: "Runs the platform: businesses, accounts and access.",
 }
 
 /** A cashier may give up to this discount without a manager's approval. */

@@ -1,5 +1,6 @@
 "use client"
 
+import { DashboardSkeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { useSyncExternalStore } from "react"
 import { useInitializeData } from "@/lib/hooks/use-initialize-data"
@@ -22,7 +23,7 @@ export default function SelfCheckoutLayout({ children }: { children: React.React
 
   let body = children
   if (!ready || (isAuthenticated && !loaded)) {
-    body = <div className="grid min-h-dvh place-items-center text-sm text-gray-500" role="status">Loading…</div>
+    body = <div className="min-h-dvh bg-gray-50 p-4"><DashboardSkeleton /></div>
   } else if (!isAuthenticated) {
     body = (
       <div className="grid min-h-dvh place-items-center bg-gray-50 px-4">

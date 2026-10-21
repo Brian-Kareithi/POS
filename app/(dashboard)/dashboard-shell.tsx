@@ -9,6 +9,7 @@ import { useInitializeData, reloadData } from "@/lib/hooks/use-initialize-data"
 import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
 import { useOfflineSync } from "@/lib/hooks/use-offline-sync"
 import { useDataStore } from "@/lib/stores/data-store"
+import { useUIStore } from "@/lib/stores/ui-store"
 import { useNotificationStore } from "@/lib/stores/notification-store"
 import { ShellSkeleton } from "@/components/ui/skeleton"
 import { Sidebar } from "@/components/layout/sidebar"
@@ -37,11 +38,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     () => false
   )
 
-  useInitializeData(ready && isAuthenticated)
-  useNotificationStream(ready && isAuthenticated && loaded)
+  // The super admin has no business to load: they are sent to /admin below.
+  const hasBusiness = isAuthenticated && role !== "admin"
+  useInitializeData(ready && hasBusiness)
+  useNotificationStream(ready && hasBusiness && loaded)
 
   // Upload any sales rung up offline: when the data is loaded, when the connection returns, and on a backing-off timer.
-  useOfflineSync(loaded && isAuthenticated)
+  useOfflineSync(loaded && hasBusiness)
+
+  // The menu is opened by the person, never by arriving on a page: close it whenever the page changes.
+  useEffect(() => { useUIStore.getState().setSidebarOpen(false) }, [pathname])
 
   useEffect(() => {
     if (ready && !isAuthenticated) {

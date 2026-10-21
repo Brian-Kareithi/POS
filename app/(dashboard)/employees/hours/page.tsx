@@ -1,5 +1,6 @@
 "use client"
 
+import { ListSkeleton } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import { api, errorMessage, type Page } from "@/lib/api/client"
 import { can, ROLE_LABELS } from "@/lib/permissions"
@@ -58,7 +59,7 @@ export default function HoursPage() {
 
       <Card><CardContent className="p-0">
         {error ? <p role="alert" className="py-10 text-center text-sm text-red-600">{error}</p>
-          : loading ? <p className="py-10 text-center text-sm text-gray-500" role="status">Loading…</p>
+          : loading ? <ListSkeleton rows={5} bordered={false} />
           : people.length === 0 ? <EmptyState icon={<Timer className="h-10 w-10" />} title="No staff yet" />
           : (
             <div className="overflow-x-auto"><table className="w-full text-sm">
@@ -130,7 +131,7 @@ function SessionsDialog({ person, from, to, canFix, onClose, onChanged }: { pers
   const [fixing, setFixing] = useState<WorkSession | null>(null)
   return (
     <Dialog open onClose={onClose} title={`${person.name}: sessions`} size="lg">
-      {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : loading ? <p className="text-sm text-gray-500">Loading…</p> : <SessionList rows={rows} canFix={canFix} onFix={setFixing} />}
+      {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : loading ? <ListSkeleton rows={4} /> : <SessionList rows={rows} canFix={canFix} onFix={setFixing} />}
       {fixing && <FixDialog session={fixing} onClose={() => setFixing(null)} onDone={() => { setFixing(null); void reload(); onChanged() }} />}
     </Dialog>
   )
@@ -179,7 +180,7 @@ function MySessions() {
       <PageHeader title="My hours" description="Your clocked time for the last two weeks, breaks not counted" />
       <StatsCard title="Hours worked, last 14 days" value={formatMinutes(total)} icon={Timer} />
       <Card><CardHeader><h3 className="text-lg font-semibold text-gray-900">Sessions</h3></CardHeader><CardContent>
-        {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : loading ? <p className="text-sm text-gray-500">Loading…</p> : <SessionList rows={rows} canFix={false} onFix={() => {}} />}
+        {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : loading ? <ListSkeleton rows={4} /> : <SessionList rows={rows} canFix={false} onFix={() => {}} />}
       </CardContent></Card>
     </div>
   )

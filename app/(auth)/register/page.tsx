@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { PasswordInput, PasswordStrength } from "@/components/auth/password-input"
 import { AuthAlert, AuthHeading } from "@/components/auth/auth-heading"
 import { IndustryPicker } from "@/components/auth/industry-picker"
+import { TermsCheckbox } from "@/components/auth/terms-checkbox"
 import { Building2, Mail, Phone, UserRound } from "lucide-react"
 
 const registerSchema = z.object({
@@ -26,6 +27,7 @@ const registerSchema = z.object({
   phone: z.string().trim().max(30, "Phone number is too long").optional(),
   password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password is too long"),
   confirmPassword: z.string(),
+  acceptTerms: z.boolean().refine((v) => v, "You need to accept the terms and conditions to create a business"),
 }).refine((d) => d.password === d.confirmPassword, { message: "Passwords don't match", path: ["confirmPassword"] })
 
 type Form = z.infer<typeof registerSchema>
@@ -49,7 +51,7 @@ export default function RegisterPage() {
     try {
       await api("/auth/register-business", {
         method: "POST", public: true,
-        body: { businessName: data.businessName, industry: data.industry, name: data.name, email: data.email, password: data.password, ...(data.phone ? { phone: data.phone } : {}) },
+        body: { businessName: data.businessName, industry: data.industry, name: data.name, email: data.email, password: data.password, ...(data.phone ? { phone: data.phone } : {}), acceptTerms: true },
       })
     } catch (e) {
       const message = authFailure(e).message
@@ -86,7 +88,8 @@ export default function RegisterPage() {
           <PasswordStrength value={password} />
         </div>
         <PasswordInput label="Confirm password" autoComplete="new-password" placeholder="Type it again" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
-        <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>Create business</Button>
+        <TermsCheckbox error={errors.acceptTerms?.message} {...register("acceptTerms")} />
+        <Button type="submit" size="lg" className="w-full rounded-full" isLoading={isSubmitting} disabled={isSubmitting}>Create business</Button>
       </form>
       <p className="mt-6 text-center text-sm text-gray-500">
         Already have an account? <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">Sign in</Link>

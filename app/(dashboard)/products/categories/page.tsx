@@ -116,7 +116,7 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Categories" description={rows ? `${meta.total} ${meta.total === 1 ? "category" : "categories"}` : "Loading…"}>
+      <PageHeader title="Categories" description={rows ? `${meta.total} ${meta.total === 1 ? "category" : "categories"}` : undefined}>
         {canEdit && <Button onClick={() => setEditing(null)}><Plus className="h-4 w-4" />Add Category</Button>}
       </PageHeader>
 

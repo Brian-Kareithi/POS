@@ -1,5 +1,6 @@
 "use client"
 
+import { ListSkeleton } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import { api, errorMessage, type Page } from "@/lib/api/client"
@@ -70,7 +71,7 @@ function RecordList({ def }: { def: RecordTypeDef }) {
           <div className="pb-2"><SearchInput placeholder={`Search ${def.plural.toLowerCase()}`} value={q} onChange={(e) => setQ(e.target.value)} /></div>
         </div>
         {error ? <p role="alert" className="py-10 text-center text-sm text-red-600">{error}</p>
-          : loading ? <p className="py-10 text-center text-sm text-gray-500" role="status">Loading…</p>
+          : loading ? <ListSkeleton rows={5} bordered={false} />
           : rows.length === 0 ? <EmptyState icon={<ClipboardList className="h-10 w-10" />} title={`No ${def.plural.toLowerCase()} here`} />
           : (
             <ul className="divide-y divide-gray-100">

@@ -1,5 +1,6 @@
 "use client"
 
+import { Skeleton } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
@@ -70,7 +71,7 @@ export default function ApiKeysPage() {
       <Card><CardContent className="p-0">
         <Table scroll><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Key</TableHead><TableHead>Can read</TableHead><TableHead>Created</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
         <TableBody>{!keys ? (
-          <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">{loadError || "Loading…"}</TableCell></TableRow>
+          <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">{loadError || <Skeleton className="mx-auto h-4 w-48" />}</TableCell></TableRow>
         ) : keys.length === 0 ? (
           <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">No API keys generated yet.</TableCell></TableRow>
         ) : keys.map((k) => (

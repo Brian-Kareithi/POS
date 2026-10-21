@@ -1,5 +1,6 @@
 "use client"
 
+import { ListSkeleton } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { deliveriesApi, DELIVERY_STATUS } from "@/lib/api/deliveries"
@@ -87,7 +88,7 @@ export default function DeliveriesPage() {
           <Tabs tabs={[{ id: "open", label: "Open" }, { id: "done", label: "Finished" }, ...(sees ? [{ id: "issues", label: "Discrepancies" }] : [])]} activeTab={view} onTabChange={(t) => setView(t as View)} />
         </div>
         {error ? <p role="alert" className="py-10 text-center text-sm text-red-600">{error}</p>
-          : loading ? <p className="py-10 text-center text-sm text-gray-500" role="status">Loading…</p>
+          : loading ? <ListSkeleton rows={5} bordered={false} />
           : rows.length === 0 ? <EmptyState icon={<Truck className="h-10 w-10" />} title={view === "open" ? "Nothing on the road" : "Nothing here"} description={runs && view === "open" ? "Create a delivery, then give it to a rider." : undefined} />
           : (
             <ul className="divide-y divide-gray-100">

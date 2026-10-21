@@ -1,5 +1,6 @@
 "use client"
 
+import { DetailSkeleton } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
@@ -41,7 +42,7 @@ export default function DeliveryDetailPage() {
   }
 
   if (error) return <p role="alert" className="py-10 text-center text-sm text-red-600">{error} <Link href="/deliveries" className="underline">Back to deliveries</Link></p>
-  if (!d) return <p className="py-10 text-center text-sm text-gray-500" role="status">Loading…</p>
+  if (!d) return <DetailSkeleton />
 
   const s = DELIVERY_STATUS[d.status]
   const runs = can(me?.role, "deliveries.manage")

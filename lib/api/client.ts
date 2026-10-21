@@ -78,9 +78,9 @@ async function toError(res: Response): Promise<ApiError> {
   let payload: { error?: { code?: string; message?: string; details?: unknown } } | null = null
   try { payload = await res.json() } catch { /* not JSON */ }
   const e = payload?.error
-  let message = e?.message ?? `Request failed (${res.status})`
-  const first = Array.isArray(e?.details) ? (e.details[0] as { path?: string; message?: string } | undefined) : undefined
-  if (e?.code === "VALIDATION_ERROR" && first?.message) message = first.path ? `${first.path}: ${first.message}` : first.message
+  // The server already words validation problems as plain sentences ("Business name must be at least 2 characters").
+  let message = e?.message ?? (res.status >= 500 ? "Something went wrong on the server. Please try again in a moment." : `Request failed (${res.status})`)
+  if (res.status === 413) message = "That file or request is too large."
   return new ApiError(res.status, e?.code ?? "HTTP_ERROR", message, e?.details)
 }
 

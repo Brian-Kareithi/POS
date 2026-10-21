@@ -38,6 +38,17 @@ export default function ShiftsPage() {
   const [notes, setNotes] = useState("")
   const [error, setError] = useState("")
 
+  // The shortcut in the top bar and on the dashboard links here with ?action=open or ?action=close.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the address once, when the page opens
+  useEffect(() => {
+    const action = new URLSearchParams(window.location.search).get("action")
+    // only open the dialog that makes sense: no open dialog to close a shift that is not open
+    if ((action === "open" && !mine) || (action === "close" && mine)) setDialog(action)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Whoever works a till counts blind: the expected amount is never shown to them (and the server does not send it).
+  const blind = !can(user?.role, "branches.all")
   const seesAll = can(user?.role, "staff.view")
   const visible = shiftRecords.filter((s) => seesAll || s.userId === user?.id)
   const mine = shiftRecords.find((s) => s.userId === user?.id && !s.closedAt)
@@ -50,7 +61,7 @@ export default function ShiftsPage() {
   const openCount = shiftRecords.filter((s) => !s.closedAt).length
 
   useEffect(() => {
-    if (!mine) return
+    if (!mine || blind) return
     api<{ shift: { expectedCash: number } | null }>("/shifts/current")
       .then((r) => r.shift && setExpectedNow(r.shift.expectedCash))
       .catch(() => {})
@@ -78,12 +89,13 @@ export default function ShiftsPage() {
     e.preventDefault()
     if (!mine) return
     if (Number.isNaN(countedNum) || countedNum < 0) return setError("Count the cash in the drawer and enter the total.")
-    if (variance !== 0 && !notes.trim()) return setError("The drawer doesn't match. Please add a short note explaining the difference.")
+    if (!blind && variance !== 0 && !notes.trim()) return setError("The drawer doesn't match. Please add a short note explaining the difference.")
     setBusy(true)
     try {
       const closed = toShift(await api(`/shifts/${mine.id}/close`, { method: "POST", body: { countedCash: countedNum, ...(notes.trim() ? { notes: notes.trim() } : {}) } }), nameOf)
       useDataStore.getState().upsert("shiftRecords", closed)
-      if (closed.variance === 0) notify.success("Shift closed", "The drawer balances.")
+      if (blind) notify.success("Shift closed", `Your count of ${formatCurrency(countedNum)} was recorded. The owner has been told if anything needs checking.`)
+      else if (closed.variance === 0) notify.success("Shift closed", "The drawer balances.")
       else notify.warning("Shift closed", `Variance KES ${(closed.variance ?? 0).toLocaleString()}`)
     } catch (err) {
       setBusy(false)
@@ -98,7 +110,7 @@ export default function ShiftsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Shifts & Cash" description="Open and close tills, and reconcile cash against what the system expects">
+      <PageHeader title="Shifts & Cash" description={blind ? "Open and close your till and count the cash" : "Open and close tills, and reconcile cash against what the system expects"}>
         {mine
           ? <Button onClick={() => { setDialog("close"); setError("") }}><Clock className="h-4 w-4" />Close my shift</Button>
           : <Button onClick={() => { setDialog("open"); setError("") }}><Clock className="h-4 w-4" />Open my shift</Button>}
@@ -106,7 +118,7 @@ export default function ShiftsPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatsCard title="Open shifts now" value={String(openCount)} icon={Clock} />
-        <StatsCard title="Cash variance, last 7 days" value={`${weekVariance >= 0 ? "+" : ""}${formatCurrency(weekVariance)}`} changeType={weekVariance < 0 ? "negative" : "positive"} change={weekVariance === 0 ? "Drawers balanced" : weekVariance < 0 ? "Cash is short" : "Cash is over"} icon={Wallet} />
+        {!blind && <StatsCard title="Cash variance, last 7 days" value={`${weekVariance >= 0 ? "+" : ""}${formatCurrency(weekVariance)}`} changeType={weekVariance < 0 ? "negative" : "positive"} change={weekVariance === 0 ? "Drawers balanced" : weekVariance < 0 ? "Cash is short" : "Cash is over"} icon={Wallet} />}
         <StatsCard title="Shifts closed, last 7 days" value={String(weekShifts.length)} icon={CheckCircle2} />
       </div>
 
@@ -115,8 +127,17 @@ export default function ShiftsPage() {
           <CardContent className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm text-gray-500">Your shift is open since {formatDateTime(mine.openedAt)}</p>
-              <p className="text-lg font-semibold text-gray-900">Expected in drawer: {formatCurrency(expectedNow)}</p>
-              <p className="text-xs text-gray-500">Opening float {formatCurrency(mine.openingCash)} + cash sales {formatCurrency(expectedNow - mine.openingCash)}</p>
+              {blind ? (
+                <>
+                  <p className="text-lg font-semibold text-gray-900">Opening float {formatCurrency(mine.openingCash)}</p>
+                  <p className="text-xs text-gray-500">When you close, count the cash in the drawer and enter the total.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-semibold text-gray-900">Expected in drawer: {formatCurrency(expectedNow)}</p>
+                  <p className="text-xs text-gray-500">Opening float {formatCurrency(mine.openingCash)} + cash sales {formatCurrency(expectedNow - mine.openingCash)}</p>
+                </>
+              )}
             </div>
             <Badge variant="success">Active</Badge>
           </CardContent>
@@ -127,7 +148,7 @@ export default function ShiftsPage() {
         <CardHeader><h3 className="text-lg font-semibold text-gray-900">Shift history</h3></CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Employee</TableHead><TableHead>Branch</TableHead><TableHead>Opened</TableHead><TableHead>Closed</TableHead><TableHead>Opening</TableHead><TableHead>Expected</TableHead><TableHead>Counted</TableHead><TableHead>Variance</TableHead><TableHead><span className="sr-only">Details</span></TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Employee</TableHead><TableHead>Branch</TableHead><TableHead>Opened</TableHead><TableHead>Closed</TableHead><TableHead>Opening</TableHead>{!blind && <TableHead>Expected</TableHead>}<TableHead>Counted</TableHead>{!blind && <TableHead>Variance</TableHead>}<TableHead><span className="sr-only">Details</span></TableHead></TableRow></TableHeader>
             <TableBody>
               {visible.map((s) => (
                 <TableRow key={s.id}>
@@ -136,8 +157,9 @@ export default function ShiftsPage() {
                   <TableCell>{formatDateTime(s.openedAt)}</TableCell>
                   <TableCell>{s.closedAt ? formatDateTime(s.closedAt) : <Badge variant="success">Open</Badge>}</TableCell>
                   <TableCell>{formatCurrency(s.openingCash)}</TableCell>
-                  <TableCell>{s.expectedCash != null ? formatCurrency(s.expectedCash) : "-"}</TableCell>
+                  {!blind && <TableCell>{s.expectedCash != null ? formatCurrency(s.expectedCash) : "-"}</TableCell>}
                   <TableCell>{s.countedCash != null ? formatCurrency(s.countedCash) : "-"}</TableCell>
+                  {!blind && (
                   <TableCell>
                     {s.variance == null ? "-" : (
                       <span title={s.notes} className="inline-flex items-center gap-1">
@@ -146,6 +168,7 @@ export default function ShiftsPage() {
                       </span>
                     )}
                   </TableCell>
+                  )}
                   <TableCell><button onClick={() => setDetail(s)} className="text-xs font-medium text-blue-600 hover:underline" aria-label={`Details of ${s.userName}'s shift`}>Details</button></TableCell>
                 </TableRow>
               ))}
@@ -155,7 +178,7 @@ export default function ShiftsPage() {
       </Card>
 
       <Dialog open={!!detail} onClose={() => setDetail(null)} title="Shift details" size="lg">
-        {detail && <ShiftDetail shift={detail} branchName={branches.find((b) => b.id === detail.branchId)?.name ?? "-"} sales={sales.filter((x) => x.shiftId === detail.id)} />}
+        {detail && <ShiftDetail shift={detail} branchName={branches.find((b) => b.id === detail.branchId)?.name ?? "-"} sales={sales.filter((x) => x.shiftId === detail.id)} blind={blind} />}
       </Dialog>
 
       <Dialog open={dialog === "open"} onClose={() => setDialog(null)} title="Open shift" size="sm">
@@ -169,16 +192,22 @@ export default function ShiftsPage() {
 
       <Dialog open={dialog === "close"} onClose={() => setDialog(null)} title="Close shift" size="sm">
         <form onSubmit={doClose} className="space-y-4">
-          <div className="rounded-lg bg-gray-50 p-3 text-sm">
-            <div className="flex justify-between"><span className="text-gray-500">Expected in drawer</span><span className="font-semibold">{formatCurrency(expectedNow)}</span></div>
-          </div>
+          {blind ? (
+            <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Count every note and coin in the drawer and enter the total. The system does not show what it expects. If the count is off, the owner is told.</p>
+          ) : (
+            <div className="rounded-lg bg-gray-50 p-3 text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">Expected in drawer</span><span className="font-semibold">{formatCurrency(expectedNow)}</span></div>
+            </div>
+          )}
           <Input label="Cash counted (KES)" type="number" min="0" step={100} value={counted} onChange={(e) => setCounted(e.target.value)} autoFocus />
-          {counted !== "" && (
+          {!blind && counted !== "" && (
             <p className={`rounded-lg px-3 py-2 text-sm font-medium ${variance === 0 ? "bg-green-50 text-green-700" : Math.abs(variance) >= 500 ? "bg-red-50 text-red-700" : "bg-orange-50 text-orange-700"}`}>
               {variance === 0 ? "The drawer balances." : variance < 0 ? `Short by ${formatCurrency(-variance)}` : `Over by ${formatCurrency(variance)}`}
             </p>
           )}
-          {variance !== 0 && counted !== "" && <Textarea label="Explain the difference" value={notes} onChange={(e) => setNotes(e.target.value)} />}
+          {blind
+            ? counted !== "" && <Textarea label="Anything to report? (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            : variance !== 0 && counted !== "" && <Textarea label="Explain the difference" value={notes} onChange={(e) => setNotes(e.target.value)} />}
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setDialog(null)}>Cancel</Button><Button type="submit" isLoading={busy}>Close shift</Button></div>
         </form>
@@ -188,7 +217,7 @@ export default function ShiftsPage() {
 }
 
 /** Who worked the shift, what the till should hold, what was counted, and every sale rung up during it. */
-function ShiftDetail({ shift, branchName, sales }: { shift: ShiftRecord; branchName: string; sales: Sale[] }) {
+function ShiftDetail({ shift, branchName, sales, blind }: { shift: ShiftRecord; branchName: string; sales: Sale[]; blind: boolean }) {
   const done = sales.filter((x) => x.status === "completed")
   const cashIn = done.reduce((sum, x) => sum + (x.payments ?? []).filter((p) => p.method === "cash").reduce((a, p) => a + p.amount, 0), 0)
   const byMethod = done.flatMap((x) => x.payments ?? []).reduce<Record<string, number>>((acc, p) => ({ ...acc, [p.method]: (acc[p.method] ?? 0) + p.amount }), {})
@@ -202,9 +231,9 @@ function ShiftDetail({ shift, branchName, sales }: { shift: ShiftRecord; branchN
         {row("Closed", shift.closedAt ? formatDateTime(shift.closedAt) : "Still open")}
         {row("Opening cash", formatCurrency(shift.openingCash))}
         {row("Cash from sales", formatCurrency(cashIn))}
-        {row("Expected in drawer", shift.expectedCash != null ? formatCurrency(shift.expectedCash) : "Worked out when the shift closes")}
+        {!blind && row("Expected in drawer", shift.expectedCash != null ? formatCurrency(shift.expectedCash) : "Worked out when the shift closes")}
         {shift.countedCash != null && row("Counted", formatCurrency(shift.countedCash))}
-        {shift.variance != null && row("Difference", <span className={shift.variance === 0 ? "text-green-600" : "text-red-600"}>{shift.variance === 0 ? "Balanced" : `${shift.variance > 0 ? "Over" : "Short"} by ${formatCurrency(Math.abs(shift.variance))}`}</span>)}
+        {!blind && shift.variance != null && row("Difference", <span className={shift.variance === 0 ? "text-green-600" : "text-red-600"}>{shift.variance === 0 ? "Balanced" : `${shift.variance > 0 ? "Over" : "Short"} by ${formatCurrency(Math.abs(shift.variance))}`}</span>)}
         {shift.notes && row("Note", shift.notes)}
       </div>
       <div>

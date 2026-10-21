@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { StatsCard } from "@/components/ui/stats-card"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
+import { refundState } from "@/lib/utils/refunds"
 import { exportCSV } from "@/lib/utils/export"
 import { ShoppingCart, DollarSign, RefreshCw, FileText, Download, HandCoins, WifiOff } from "lucide-react"
 
@@ -105,9 +106,9 @@ export default function SalesPage() {
                 <TableCell>{customerName(sale.customerId)}</TableCell>
                 <TableCell className="text-gray-500">{cashierName(sale.userId)}</TableCell>
                 <TableCell>{sale.items?.length || 0}</TableCell>
-                <TableCell>{formatCurrency(sale.total)}{sale.amountDue ? <span className="block text-xs text-orange-600">{formatCurrency(sale.amountDue)} due</span> : null}</TableCell>
+                <TableCell>{formatCurrency(sale.total)}{sale.refundedAmount ? <span className="block text-xs text-orange-700">-{formatCurrency(sale.refundedAmount)} refunded</span> : null}{sale.amountDue ? <span className="block text-xs text-orange-600">{formatCurrency(sale.amountDue)} due</span> : null}</TableCell>
                 <TableCell>{methodLabel[sale.paymentMethod]}</TableCell>
-                <TableCell><Badge variant={sale.status === "completed" ? "success" : sale.status === "refunded" || sale.status === "cancelled" ? "danger" : "default"}>{sale.status === "cancelled" ? "voided" : sale.status}</Badge></TableCell>
+                <TableCell><Badge variant={refundState(sale) === "partial" ? "warning" : refundState(sale) === "full" || sale.status === "refunded" || sale.status === "cancelled" ? "danger" : sale.status === "completed" ? "success" : "default"}>{sale.status === "cancelled" ? "voided" : refundState(sale) === "partial" ? "partly refunded" : refundState(sale) === "full" ? "refunded" : sale.status}</Badge></TableCell>
                 <TableCell className="text-gray-500">{formatDateTime(sale.createdAt)}</TableCell>
               </TableRow>
             ))}

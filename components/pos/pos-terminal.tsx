@@ -94,12 +94,13 @@ export function PosTerminal() {
   // Returns true when the item was added (false when it can't be sold).
   const addItem = (product: Product) => {
     const live = products.find((p) => p.id === product.id) ?? product
+    if (needsShift && order.length === 0) notify.warning("Open a shift to make sales", "You can build the order, but payment needs an open shift (Shifts & Cash).")
     if (expiryStatus(live) === "expired") {
-      setWarning(`${live.name} is past its expiry date and can't be sold.`)
+      notify.warning("Cannot sell this item", `${live.name} is past its expiry date.`)
       return false
     }
     if (inOrder(live.id) + 1 > stockOf(live)) {
-      setWarning(stockOf(live) === 0 ? `${live.name} is out of stock.` : `Only ${stockOf(live)} of ${live.name} in stock.`)
+      notify.warning(stockOf(live) === 0 ? "Out of stock" : "Not enough stock", stockOf(live) === 0 ? `${live.name} is out of stock.` : `Only ${stockOf(live)} of ${live.name} in stock.`)
       return false
     }
     setOrder((current) => {
@@ -211,7 +212,7 @@ export function PosTerminal() {
 
   const openCharge = () => {
     if (!order.length) return
-    if (needsShift) return setWarning("Open your shift before taking payments.")
+    if (needsShift) return notify.warning("Open a shift to make sales", "You need an open shift before taking payments. Go to Shifts & Cash to open yours.")
     setPayError("")
     setPayOpen(true)
   }
@@ -311,7 +312,8 @@ export function PosTerminal() {
           <span className="ml-auto hidden text-pos-muted xl:block">Ctrl+Q new sale · F2 search · F4 charge · F6 hold · F8 customer · F9 discount</span>
         </div>
 
-        {warning && (
+        {/* Only the unknown-barcode warning stays on the page, because it has a button; every other warning is a toast. */}
+        {warning && unknownCode && (
           <div role="alert" className="mx-4 mt-3 flex items-center justify-between gap-2 rounded-lg bg-pos-warn-bg px-3 py-2 text-xs text-pos-warn-text">
             <span>{warning}</span>
             <span className="flex items-center gap-2">

@@ -12,6 +12,7 @@ import { notify } from "@/lib/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PasswordInput, PasswordStrength } from "@/components/auth/password-input"
+import { TermsCheckbox } from "@/components/auth/terms-checkbox"
 import { AuthAlert, AuthHeading } from "@/components/auth/auth-heading"
 import { CheckCircle2, Mail, UserRound } from "lucide-react"
 
@@ -38,6 +39,7 @@ const joinSchema = z.object({
   email: z.string().trim().email("Enter a valid email address").max(254),
   password: z.string().min(8, "Password must be at least 8 characters").max(128),
   confirmPassword: z.string(),
+  acceptTerms: z.boolean().refine((v) => v, "You need to accept the terms and conditions to request access"),
 }).refine((d) => d.password === d.confirmPassword, { message: "Passwords don't match", path: ["confirmPassword"] })
 
 type Form = z.infer<typeof joinSchema>
@@ -62,7 +64,7 @@ function JoinForm() {
     setError(null)
     try {
       // 202: a pending account is created. The person is NOT signed in.
-      await api("/auth/register", { method: "POST", public: true, body: { name: data.name, email: data.email, password: data.password, businessSlug: business } })
+      await api("/auth/register", { method: "POST", public: true, body: { name: data.name, email: data.email, password: data.password, businessSlug: business, acceptTerms: true } })
       setDone(true)
       notify.success("Request sent", "The owner will review it.")
     } catch (e) {
@@ -96,7 +98,8 @@ function JoinForm() {
           <PasswordStrength value={password} />
         </div>
         <PasswordInput label="Confirm password" autoComplete="new-password" placeholder="Type it again" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
-        <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>Request access</Button>
+        <TermsCheckbox error={errors.acceptTerms?.message} {...register("acceptTerms")} />
+        <Button type="submit" size="lg" className="w-full rounded-full" isLoading={isSubmitting} disabled={isSubmitting}>Request access</Button>
       </form>
       <Steps done={0} />
       <p className="mt-6 text-center text-sm text-gray-500">

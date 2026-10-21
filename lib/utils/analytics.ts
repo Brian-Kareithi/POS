@@ -45,8 +45,11 @@ export const inRange = (iso: string, range: Range) => {
 export const salesIn = (sales: Sale[], range: Range) => sales.filter((s) => inRange(s.createdAt, range))
 export const txIn = (txs: Transaction[], range: Range) => txs.filter((t) => inRange(t.date, range))
 
+/** The share of a sale that was kept: 1 for an ordinary sale, less once part of it has been refunded. */
+const kept = (sale: Sale) => (sale.total > 0 && sale.refundedAmount ? Math.max(0, 1 - sale.refundedAmount / sale.total) : 1)
+
 const costOf = (sale: Sale, products: Map<string, Product>) =>
-  (sale.items ?? []).reduce((sum, i) => sum + i.quantity * (i.unitCost ?? products.get(i.productId)?.costPrice ?? 0), 0)
+  (sale.items ?? []).reduce((sum, i) => sum + (i.quantity - (i.refundedQty ?? 0)) * (i.unitCost ?? products.get(i.productId)?.costPrice ?? 0), 0)
 
 export interface Summary {
   transactions: number
@@ -67,16 +70,16 @@ export function summarize(sales: Sale[], products: Product[]): Summary {
   const byId = new Map(products.map((p) => [p.id, p]))
   const completed = sales.filter((s) => s.status === "completed")
   const refunded = sales.filter((s) => s.status === "refunded")
-  const gross = completed.reduce((s, x) => s + x.subtotal, 0)
-  const discounts = completed.reduce((s, x) => s + x.discountTotal, 0)
-  const refunds = refunded.reduce((s, x) => s + (x.subtotal - x.discountTotal), 0)
+  const gross = completed.reduce((s, x) => s + x.subtotal * kept(x), 0)
+  const discounts = completed.reduce((s, x) => s + x.discountTotal * kept(x), 0)
+  const refunds = refunded.reduce((s, x) => s + (x.subtotal - x.discountTotal), 0) + completed.reduce((s, x) => s + (x.subtotal - x.discountTotal) * (1 - kept(x)), 0)
   const cogs = completed.reduce((s, x) => s + costOf(x, byId), 0)
   const net = gross - discounts
   const grossProfit = net - cogs
   return {
     transactions: completed.length,
     gross, discounts, refunds, net,
-    taxes: completed.reduce((s, x) => s + x.taxTotal, 0),
+    taxes: completed.reduce((s, x) => s + x.taxTotal * kept(x), 0),
     cogs, grossProfit,
     margin: net > 0 ? (grossProfit / net) * 100 : 0,
     collected: completed.reduce((s, x) => s + x.paidAmount, 0),

@@ -1,5 +1,6 @@
 "use client"
 
+import { Skeleton } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -131,7 +132,7 @@ export default function BackupSettingsPage() {
           <Table scroll>
             <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Size</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>{!snapshots ? (
-              <TableRow><TableCell colSpan={3} className="py-8 text-center text-gray-500">{loadError || "Loading…"}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={3} className="py-8 text-center text-gray-500">{loadError || <Skeleton className="mx-auto h-4 w-48" />}</TableCell></TableRow>
             ) : snapshots.length === 0 ? (
               <TableRow><TableCell colSpan={3} className="py-8 text-center text-gray-500">No snapshots yet.</TableCell></TableRow>
             ) : snapshots.map((b) => (

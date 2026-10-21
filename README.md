@@ -1,154 +1,139 @@
 # This POS System
 
-A point-of-sale system for Kenyan retail shops, built with Next.js 16. It covers the till, stock, staff, money and reporting for one shop or several, and ships with fictional demo data (a two-branch shop called **Jamii Retail**) so every screen has something to show.
+A cloud point-of-sale system for Kenyan businesses, built with Next.js 16. One app serves many kinds of business (shops, restaurants, salons, pharmacies, garages, couriers, schools and more): each business picks its industry when it signs up and gets the tabs, staff roles and wording that fit it. The owner can hide the tabs they don't need and upload their own logo, and the developer runs the whole platform from a separate **super admin** portal.
 
-> **This is a front-end demo.** All data lives in the browser (`localStorage`), M-Pesa and eTIMS are simulated, and there is no server database yet. See [What is simulated](#what-is-simulated) for what a production version would add.
+This is the web app. It talks to the **Kareithi POS API** in the sibling folder `../Kareithi-Pos`, which owns all data, prices, stock, roles and permissions. The browser only decides what to *show*; the server decides what is *allowed*.
 
 ## Tech stack
 
-- **Framework:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4
-- **State:** Zustand (persisted to the browser)
+- **Framework:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4. This Next.js has breaking changes from older versions: read the guides in `node_modules/next/dist/docs/` before changing framework-level code.
+- **State:** Zustand (the session and a few preferences persist; business data is held in memory)
 - **Forms:** React Hook Form + Zod
-- **Charts:** Recharts, with a validated colour palette that has light and dark steps
+- **Charts:** Recharts, with a colour palette that has light and dark steps
 - **Toasts:** Sonner, themed to the POS green
+- **Animation:** `@lottiefiles/dotlottie-react` for the sign-in background
 - **Icons:** Lucide
+- **Tests:** Vitest + Testing Library
 
 ## Getting started
 
+Start the API first (see `../Kareithi-Pos/README.md`), then:
+
 ```bash
 npm install
+echo "NEXT_PUBLIC_API_URL=http://localhost:4000" > .env.local   # default; change it for a deployed API
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The demo data loads on first run. To start over, clear the site's storage in your browser, or restore a backup from **Settings → Backups & data export**.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Demo accounts
+| Command | What it does |
+|---|---|
+| `npm run dev` | Development server |
+| `npm run build` / `npm start` | Production build / run it |
+| `npm test` | Vitest: sign-in, join link, staff approval, industry picker, navigation, offline sync |
+| `npm run lint` | ESLint |
 
-Any password works. The login page has one-click buttons for each role.
+### Who signs in
 
-| Role | Email | What they see |
-|---|---|---|
-| Owner / Director | `owner@jamiiretail.co.ke` | Everything, including staff, settings and backups |
-| Manager | `manager@jamiiretail.co.ke` | Runs the shop: approvals, prices, refunds, stock, reports |
-| Cashier | `cashier1@jamiiretail.co.ke` | The till, small discounts, customers and their own shift |
-| Stockkeeper | `stock@jamiiretail.co.ke` | Products, stock counts, purchase orders |
+- **A business owner** creates a business at `/register` (they choose an industry and accept the terms). They then approve staff who ask to join through the link on the Staff page (`/join?business=<slug>`).
+- **Staff** request access, wait as *pending*, and sign in once the owner approves them and gives them a role.
+- **The super admin** (the platform developer) signs in on the same login screen. That account is created directly in the database (see "Super admin accounts" in the API's README); there is no sign-up for it. After sign-in they land in `/admin`.
 
-`cashier2@jamiiretail.co.ke` works at the Eastleigh branch. The **manager approval PIN** used for refunds, voids and large discounts is `1234`.
+## What the app does
 
-## Features
+### For every business
+- **The till** (`/`): search or scan, hold and resume sales, discounts and promo codes, split payments (cash, M-Pesa, card, bank, credit), receipts you can print or share, keyboard shortcuts (`F2` search, `F4` charge, `F6` hold, `F8` customer, `F9` discount). A sale needs an open shift; if there isn't one you get a toast that says so.
+- **Partial refunds:** on a sale, tap Refund and choose which items, and how many units of each, are coming back. Only those units return to stock, only that share is refunded, and the sale shows what was kept. A sale can be refunded in several steps; once any part has been refunded it can no longer be voided. Anyone allowed to refund can do it, and a cashier still needs a manager's PIN.
+- **Offline selling:** sales rung up without internet are saved on the device and uploaded, oldest first, when the connection returns. Each sale is reported as created, duplicate, rejected or retry; none is silently dropped.
+- **Owners and hours:** owners never clock in, so they have no clock button and are left out of the Hours worked report (they can still see everyone else's hours). Selling still needs an open shift for everyone, owners included.
+- **Dashboard** (`/overview`), **Insights**, **Reports**, **Accounting**, **Promotions**, **Customers**, **Products**, **Inventory** (stock by branch, purchase orders, transfers), **Staff**, **Shifts & Cash**, **Hours worked**, **Audit log**, **Settings**.
+- **Shift shortcut:** anyone who works a till gets an "Open shift" / "Close shift" button in the top bar and on the dashboard, which opens the right dialog on Shifts & Cash.
+- **Multi-branch:** the branch switcher filters the dashboard, sales and reports; staff only sell from their own branch's stock.
+- **Dark mode**, a layout that works on phones, and all amounts in KES.
 
-### The till (`/`)
-- Search by name, SKU or barcode. USB and Bluetooth scanners work with no setup, and any device with a camera can scan from the browser (Chrome or Edge).
-- Hold a sale and resume it later; remove or correct items; stock is checked per branch, and expired products can't be sold.
-- Discounts, promo codes and loyalty points. Cashiers can give up to 5% on their own; more needs a manager's PIN.
-- Payments: cash with automatic change, M-Pesa (simulated STK push with paid, cancelled and insufficient-funds outcomes), card, bank transfer and customer credit. Payments can be split across methods, and a balance can be put on a customer's account.
-- A sale can never be recorded twice (idempotent submit), and failed payments record nothing.
-- Receipts: print at 80 mm, send by SMS, email or WhatsApp (simulated), reprint without creating a new sale. Receipts carry a KRA eTIMS reference and QR code.
-- Keyboard shortcuts: `F2` search, `F4` charge, `F6` hold, `F8` customer, `F9` discount.
-- Customers are optional. A walk-in can buy without registering.
-- Offline mode: click the cloud icon in the top bar to simulate losing internet. Sales are saved on the device, flagged as waiting to sync, and uploaded when you reconnect.
+### Industry-specific
+Each industry gets its own extra tabs and fixed staff roles, for example Deliveries and Fleet for couriers and distributors, Appointments for salons, Prescriptions for pharmacies, Work orders for garages, Students and Fee invoices for schools. There is no catch-all "Other" business: every industry has its own roles.
 
-### Business owner tools
-- **Dashboard** (`/overview`): sales, gross profit, expenses, net profit, transactions and basket size for today, 7 days, month or year, each compared with the previous period. Also cash flow, payment mix, best sellers, slow movers, low stock, items nearing expiry, outstanding customer payments and branch comparison.
-- **Insights** (`/insights`): stock run-out forecasts, suggested reorders you can turn into purchase orders in one click, busiest days and hours, products bought together, and a 7-day sales forecast.
-- **Reports** (`/reports`): sales, profit, inventory, customers, staff and VAT. Custom date ranges, branch filter, and export to CSV, Excel or PDF.
-- **Accounting:** expenses by category, income, and profit that is worked out from cost of goods sold, not simply sales minus expenses.
-- **Promotions:** percentage, fixed-amount and buy-one-get-one codes that can be scheduled and switched off.
-- **Customers:** profiles, loyalty points, consent for SMS, credit accounts with limits, due dates and repayments.
+### Owner tools
+- **Features & tabs** (`/settings/features`, owner only): every tab the business can use, what it does and how it helps growth, with a switch to hide the ones it doesn't need. Hidden tabs disappear for everyone in the business; data is kept.
+- **Logo** (`/settings/business`, owner only): upload a PNG, JPEG or WebP up to 2 MB. It shows at the top of the sidebar and top bar for every employee.
+- **Staff & permissions**, **Backups & data export**, **API keys**, **Integrations**.
 
-### Stock and suppliers
-- Products with barcodes, SKUs, costs, prices, tax rates, batch numbers and expiry dates; archive instead of delete.
-- Stock is counted per branch. Update stock by adding, removing or setting a total, with a reason (damaged, expired, missing, returned, count correction).
-- Purchase orders with line items, approval and **receive goods**, which updates stock.
-- Transfers between branches with request, approve and delivered steps.
-- Sales deduct stock automatically; refunds and voids return it.
+### Super admin (`/admin`)
+A separate portal with the same floating sidebar and top bar, and no business data. It never loads any business's records.
+- **Overview:** businesses, people, sign-ups, who has been active, and a split by industry.
+- **Businesses:** search by business, owner name or owner email; open one to see every account in it.
+- **Per business:** suspend, close or reactivate (everyone is signed out and locked out); hide or show its tabs; **erase it permanently** (type `delete` to confirm).
+- **Per person:** set a password or email a reset link, force sign-out, reset two-factor, revoke or restore access.
+- **Activity:** what people did inside every business, and a log of the super admin's own actions.
 
-### Staff, control and trust
-- Roles: Owner, Manager, Cashier, Stockkeeper, with a visible permission matrix under **Staff**. Menus and URLs are restricted by role.
-- **Audit log** (`/audit`): who changed a price, adjusted stock, gave a discount, voided a sale or issued a refund. Risky events also raise an alert.
-- Refunds and voids need a reason, and manager approval when a cashier does them.
-- **Shifts & cash:** opening float, expected cash, counted cash and variance, with a note required when the drawer doesn't balance.
-- **Backups & data export:** download a full backup, restore from a file, or export any table to CSV.
+## Under the hood
 
-### Multi-branch
-- The top bar's branch switcher filters the dashboard, sales and reports. Each branch has its own stock, sales, expenses and staff.
-- Staff are assigned to a branch and a cashier only sells from their own branch's stock.
+### Talking to the API (`lib/api/client.ts`)
+One `api()` function adds the bearer token, parses errors into an `ApiError` and, on a `401`, rotates the refresh token and retries. Refreshes are serialised, because the server treats a replayed refresh token as theft. The auth store registers itself with the client through a small bridge so the two never import each other. Validation errors arrive from the server already worded as plain sentences ("Business name must be at least 2 characters") and are shown as they are. `lib/api/messages.ts` maps error codes (suspended business, expired session, offline, rate limit...) to the wording on sign-in and sign-up.
 
-### Also included
-- **Self-checkout:** QR-based checkout flow for customers.
-- **Dark mode**, a responsive layout with a mobile bottom navigation, and all amounts in KES.
+### Session and data (`lib/stores/`)
+- `auth-store` holds the user and tokens (persisted). It validates the stored session once per visit, and a network failure is not treated as a bad token, so a till keeps working offline. The super admin has their own `/admin/me` and `/admin/logout`.
+- `data-store` holds the business's products, stock, sales, staff and so on after `useInitializeData` loads them. `ui-store` holds the theme, branch filter, the mobile menu and whether the desktop sidebar is collapsed.
+- A snapshot of the data and a queue of offline sales live in `lib/offline/`; `public/sw.js` is the service worker; `useOfflineSync` uploads when the connection returns.
 
-## What is simulated
+### Navigation and roles (`lib/navigation.ts`, `lib/permissions.ts`)
+Tabs are built from the industry config the server returns (`GET /industry`): its modules (minus any the owner hid), its wording and its record types, filtered by what the person's role may do. `landingFor` decides the first page after sign-in: the dashboard for anyone who can see it, otherwise the till, stock or deliveries. `routeAllowed` fails closed: an unknown route is not allowed. `lib/permissions.ts` mirrors the server's map only to decide what to show; the server enforces it.
 
-| Area | In this demo | In production |
-|---|---|---|
-| Data | Browser `localStorage` | Server database, one isolated tenant per business |
-| M-Pesa | Simulated STK push in the payment dialog | Daraja API with callbacks |
-| eTIMS | Reference and QR on receipts | Submit invoices to KRA |
-| SMS / email / WhatsApp receipts | A confirmation toast | Real gateways |
-| Authentication | Any password; roles enforced in the UI | Hashed passwords, sessions, server-side permission checks |
-| Backups | Download / restore a JSON file | Scheduled, monitored, tested server backups |
-| Offline | Simulated with a toggle | Service worker plus a sync queue with conflict handling |
+### Layout
+`components/layout/sidebar-frame.tsx` is the one floating sidebar used by both portals: solid rounded card, a logo and name on top, menu pills, then the signed-in person's chip above Logout. On wide screens it collapses to icons (remembered); on phones it is a drawer opened by the hamburger, closed by default, and it closes on every page change. Toasts drop in top-centre on phones and top-right elsewhere.
 
-Role checks in this demo only hide screens and block actions in the browser. A real deployment must enforce the same permissions on the server.
+### Logos
+- **Sign-in and sign-up always show the platform logo** (`PlatformLogo`). No business is known there, and a business's logo must never reach another business. The API never sends a business logo before sign-in.
+- **After sign-in** the sidebar and top bar show the business's own logo, or the platform logo if it has none (`BusinessLogo`).
+- To change the platform logo, replace `public/brand/logo.png` (a square PNG, at least 256x256). The path is `PLATFORM_LOGO` in `lib/constants/index.ts`.
+
+### Sign-in screens
+The liquid background is the "Liquid style abstract animated background" by Meenu Chan (LottieFiles, Lottie Simple License). Both colourings (soft green for light mode, deep green for dark mode) and the player's WebAssembly are served from `public/animations/`, so nothing loads from a third party. It stays still for people who ask their device for less motion. The industry picker is a closed field that opens a searchable list (a bottom sheet on phones) and understands everyday words such as "salon" or "pharmacy". `/terms` holds the terms and conditions, which are fictional placeholder text until real ones are written.
+
+### Loading states
+Pages show skeleton screens, not spinners or "Loading..." text. `components/ui/skeleton.tsx` has shapes drawn like the live design: the full shell (floating sidebar, top bar), the sign-in card, stat cards (2x2), lists, forms and detail pages. When a screen's design changes, update its skeleton too.
 
 ## Project structure
 
 ```
 app/
-├── (auth)/             Login, register, 2FA
-├── (dashboard)/        App shell (sidebar and top bar) and every staff page
+├── (auth)/             Sign-in, sign-up, join link, password reset, with the liquid background
+├── (dashboard)/        The business portal: shell plus every staff page
 │   ├── page.tsx        The till, at "/"
-│   ├── overview/       Business dashboard
-│   ├── insights/       Reorders, forecasts, peak times
-│   ├── sales/          History, returns and voids, quotes, receipts
-│   ├── products/       Catalog, categories, brands, suppliers
-│   ├── inventory/      Stock by branch, adjustments, purchase orders, transfers
-│   ├── customers/      Profiles, loyalty, credit accounts
-│   ├── employees/      Staff, permission matrix, shifts & cash
-│   ├── accounting/     Expenses, income, profit
-│   ├── reports/        Sales, profit, inventory, customers, staff, VAT
-│   ├── promotions/     Promo codes and offers
-│   ├── audit/          Audit log
-│   └── settings/       Business, taxes, receipts, integrations, backups
+│   ├── overview/       Dashboard
+│   ├── settings/       Business (with logo), features, taxes, receipts, payments, backups...
+│   └── ...             sales, products, inventory, customers, employees, deliveries, fleet, work, reports
+├── (admin)/admin/      The super admin portal: overview, businesses, activity, my account
+├── terms/              Terms and conditions
 ├── self-checkout/      Customer self-checkout flow
 └── checkout/           QR payment page
 components/
+├── auth/               Industry picker, terms checkbox, liquid background, password input
+├── brand/              PlatformLogo, BusinessLogo
+├── layout/             SidebarFrame, sidebar, top bar, shift shortcut, clock widget, connection status
 ├── pos/                Till, payment, receipt, discount, customer, scanner and stock dialogs
-├── reports/            Date range and export toolbar
-├── layout/             Sidebar, top bar, branch switcher, connection status
-└── ui/                 Buttons, inputs, tables, dialogs, toaster
+└── ui/                 Buttons, inputs, tables, dialogs, skeletons, toaster
 lib/
-├── services/           checkout.ts: completing, refunding and syncing sales
-├── stores/             Zustand stores (data, auth, POS session, UI)
-├── utils/              analytics, pricing, stock, barcode, export
-├── constants/          Fictional demo data (mock-data.ts, mock-seed.ts)
-├── permissions.ts      Roles and the permission matrix
-└── navigation.ts       Role-aware navigation and route access
+├── api/                client, per-area API helpers (admin, staff, deliveries, sync), error messages
+├── stores/             Zustand stores (auth, data, POS session, UI)
+├── offline/            Snapshot and offline sale queue
+├── hooks/              Data loading, notifications stream, offline sync, online status
+├── services/           Completing, refunding and syncing sales
+├── navigation.ts       Role- and industry-aware navigation and route access
+└── permissions.ts      Roles and the permission map (display only)
+public/
+├── brand/logo.png      The platform logo
+├── animations/         Sign-in background (light and dark) and its player
+└── sw.js               Service worker
+tests/                  Vitest
 ```
 
-## Scripts
+## Deploying
 
-```bash
-npm run dev     # development server
-npm run build   # production build
-npm start       # run the production build
-npm run lint    # ESLint
-```
+Set `NEXT_PUBLIC_API_URL` to the API's public address, run `npm run build` and `npm start`. The API must allow this site's origin in its `CORS_ORIGINS`, and needs file storage configured for logo uploads.
 
 ## License
 
 MIT
-
-
-## Backend connection
-
-The app talks to the Kareithi POS API (see `../Kareithi-Pos`). Set the address in `.env.local` (default `http://localhost:4000`):
-
-```
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
-
-- Owners create a business at `/register-business`. Staff join with the link on the Staff page (`/join?business=<slug>`), wait as *pending*, and can sign in once the owner approves them.
-- All data (products, stock, sales, customers, staff, settings) is loaded from the API after sign-in and held in memory only.
-- `npm test` runs the sign-in, join-link and staff-approval tests.

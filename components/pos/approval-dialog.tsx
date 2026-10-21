@@ -17,6 +17,11 @@ interface Props {
   /** When true the person must enter a manager's PIN before continuing. */
   needsApproval: boolean
   confirmLabel?: string
+  /** Extra content shown above the reason, for example which items to refund. */
+  children?: React.ReactNode
+  /** Keeps the confirm button off until the extra content is filled in. */
+  confirmDisabled?: boolean
+  size?: "sm" | "md" | "lg"
   onClose: () => void
   onConfirm: (result: { reason: string; approvedBy?: string; approvalToken?: string }) => void | Promise<void>
 }
@@ -25,7 +30,7 @@ export function ApprovalDialog(props: Props) {
   return props.open ? <ApprovalForm {...props} /> : null
 }
 
-function ApprovalForm({ title, description, reasons, needsApproval, confirmLabel = "Confirm", onClose, onConfirm }: Props) {
+function ApprovalForm({ title, description, reasons, needsApproval, confirmLabel = "Confirm", children, confirmDisabled, size = "sm", onClose, onConfirm }: Props) {
   const [busy, setBusy] = useState(false)
   const [reason, setReason] = useState(reasons?.[0] ?? "")
   const [other, setOther] = useState("")
@@ -56,9 +61,10 @@ function ApprovalForm({ title, description, reasons, needsApproval, confirmLabel
   }
 
   return (
-    <Dialog open onClose={onClose} title={title} size="sm">
+    <Dialog open onClose={onClose} title={title} size={size}>
       <form onSubmit={submit} className="space-y-4">
         {description && <p className="text-sm text-gray-500">{description}</p>}
+        {children}
         {reasons && (
           <>
             <Select label="Reason" options={[...reasons, "Other"].map((r) => ({ value: r, label: r }))} value={reason} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setReason(e.target.value)} />
@@ -74,7 +80,7 @@ function ApprovalForm({ title, description, reasons, needsApproval, confirmLabel
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" isLoading={busy}>{confirmLabel}</Button>
+          <Button type="submit" isLoading={busy} disabled={confirmDisabled}>{confirmLabel}</Button>
         </div>
       </form>
     </Dialog>

@@ -1,15 +1,17 @@
 "use client"
 
 import Link from "next/link"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Building2, Percent, Printer, CreditCard, Users,
-  HardDrive, Key, Plug
+  HardDrive, Key, Plug, LayoutGrid
 } from "lucide-react"
 
-const settingsItems = [
+const settingsItems: { href: string; label: string; desc: string; icon: typeof Building2; ownerOnly?: boolean }[] = [
   { href: "/settings/business", label: "Business Settings", desc: "Company info, currency, timezone", icon: Building2 },
+  { href: "/settings/features", label: "Features & tabs", desc: "Hide tabs you don't need, see how each one helps", icon: LayoutGrid, ownerOnly: true },
   { href: "/settings/taxes", label: "Tax Settings", desc: "Configure tax rates and rules", icon: Percent },
   { href: "/settings/receipts", label: "Receipt Settings", desc: "Customize receipt templates", icon: Printer },
   { href: "/settings/payments", label: "Payment Settings", desc: "Payment method configuration", icon: CreditCard },
@@ -20,11 +22,12 @@ const settingsItems = [
 ]
 
 export default function SettingsPage() {
+  const isOwner = useAuthStore((s) => s.user?.role === "owner")
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" description="Configure your system" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {settingsItems.map((item) => (
+        {settingsItems.filter((i) => !i.ownerOnly || isOwner).map((item) => (
           <Link key={item.href} href={item.href}>
             <Card className="hover:border-gray-300 transition-colors cursor-pointer">
               <CardContent className="p-6 flex items-start gap-4">

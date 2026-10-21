@@ -10,13 +10,14 @@ vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: str
 import JoinPage from "@/app/(auth)/join/page"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
-async function fill(over: Partial<Record<"name" | "email" | "password" | "confirm", string>> = {}) {
+async function fill(over: Partial<Record<"name" | "email" | "password" | "confirm", string>> = {}, accept = true) {
   const user = userEvent.setup()
   render(<JoinPage />)
   await user.type(screen.getByLabelText("Full name"), over.name ?? "Wanjiru Kamau")
   await user.type(screen.getByLabelText("Email"), over.email ?? "wanjiru@example.com")
   await user.type(screen.getByLabelText("Password"), over.password ?? "password123")
   await user.type(screen.getByLabelText("Confirm password"), over.confirm ?? over.password ?? "password123")
+  if (accept) await user.click(screen.getByRole("checkbox", { name: /terms and conditions/i }))
   await user.click(screen.getByRole("button", { name: "Request access" }))
 }
 
@@ -28,7 +29,7 @@ describe("join link", () => {
     expect(await screen.findByText("Request sent")).toBeInTheDocument()
     expect(screen.getByText(/owner will review it before you can sign in/i)).toBeInTheDocument()
     expect(calls).toHaveLength(1)
-    expect(calls[0]).toMatchObject({ method: "POST", path: "/auth/register", body: { name: "Wanjiru Kamau", email: "wanjiru@example.com", password: "password123", businessSlug: "acme-stores" } })
+    expect(calls[0]).toMatchObject({ method: "POST", path: "/auth/register", body: { name: "Wanjiru Kamau", email: "wanjiru@example.com", password: "password123", businessSlug: "acme-stores", acceptTerms: true } })
     expect(calls.some((c) => c.path === "/auth/login")).toBe(false)
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
   })
@@ -37,6 +38,13 @@ describe("join link", () => {
     const calls = mockApi({})
     await fill({ password: "short", confirm: "short" })
     expect(await screen.findByText("Password must be at least 8 characters")).toBeInTheDocument()
+    expect(calls).toHaveLength(0)
+  })
+
+  it("will not send the request until the terms are accepted, and says why", async () => {
+    const calls = mockApi({})
+    await fill({}, false)
+    expect(await screen.findByText("You need to accept the terms and conditions to request access")).toBeInTheDocument()
     expect(calls).toHaveLength(0)
   })
 

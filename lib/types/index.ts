@@ -18,10 +18,12 @@ export interface User {
 export type Role =
   | "owner" | "manager" | "cashier" | "stockkeeper"
   | "dispatcher" | "rider" | "driver" | "warehouse_clerk" | "waiter" | "kitchen" | "stylist" | "pharmacist" | "technician" | "instructor" | "front_desk"
+  /** The platform operator. Has no business; only ever sees /admin. */
+  | "admin"
 
 export type Industry =
   | "retail" | "hardware_building" | "ecommerce_omnichannel" | "hospitality" | "beauty_wellness" | "healthcare_pharmacy" | "fuel_automotive"
-  | "logistics" | "warehousing_distribution" | "education" | "events_entertainment" | "agriculture" | "property_rental" | "professional_services" | "other"
+  | "logistics" | "warehousing_distribution" | "education" | "events_entertainment" | "agriculture" | "property_rental" | "professional_services"
 
 export interface Business {
   id: string
@@ -33,6 +35,8 @@ export interface Business {
   address: string
   currency: string
   timezone: string
+  /** The owner's logo (a path on the API). Absent until they upload one; the platform logo is shown instead. */
+  logo?: string
   createdAt: string
 }
 
@@ -249,6 +253,9 @@ export interface Sale {
   synced?: boolean
   loyaltyEarned?: number
   loyaltyRedeemed?: number
+  /** Money handed back through partial refunds so far. A full refund changes the status instead. */
+  refundedAmount?: number
+  refunds?: SaleRefund[]
   couponCode?: string
   /** Set by the server once the sale has been submitted to KRA eTIMS. Placeholder references start with STUB-. */
   etimsInvoiceNo?: string
@@ -272,7 +279,22 @@ export interface SaleItem {
   tax: number
   total: number
   unitCost?: number
+  /** How many of the units on this line have been refunded. */
+  refundedQty?: number
   product?: Product
+}
+
+/** One partial refund: which lines came back, and where the money went. */
+export interface SaleRefund {
+  id: string
+  saleId: string
+  amount: number
+  cashAmount: number
+  creditAmount: number
+  reason: string
+  approvedBy?: string
+  createdAt: string
+  items: { id: string; saleItemId: string; quantity: number; amount: number }[]
 }
 
 export interface Payment {
@@ -503,7 +525,9 @@ export interface IndustryConfig {
   industry: Industry
   label: string
   icon: string
+  /** the tabs this business shows: what its industry offers, minus what the owner hid */
   modules: ModuleId[]
+  hiddenModules?: ModuleId[]
   terms: Terms
   roles: { role: Role; label: string; description: string }[]
   recordTypes: RecordTypeDef[]

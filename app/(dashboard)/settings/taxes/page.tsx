@@ -1,5 +1,6 @@
 "use client"
 
+import { ListSkeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { api, errorMessage } from "@/lib/api/client"
 import { notify } from "@/lib/toast"
@@ -50,7 +51,7 @@ export default function TaxSettingsPage() {
       <Card>
         <CardHeader><h3 className="text-lg font-semibold text-gray-900">VAT</h3></CardHeader>
         <CardContent className="space-y-5">
-          {!taxes ? (error ? <p role="alert" className="text-sm text-red-600">{error}</p> : <p role="status" className="text-sm text-gray-500">Loading…</p>) : (
+          {!taxes ? (error ? <p role="alert" className="text-sm text-red-600">{error}</p> : <ListSkeleton rows={2} bordered={false} />) : (
             <>
               <div className="flex items-center justify-between gap-4">
                 <div><p className="font-medium text-gray-900">Charge VAT</p><p className="text-sm text-gray-500">Each product still carries its own tax rate, which is set on the product.</p></div>

@@ -1,5 +1,6 @@
 "use client"
 
+import { ListSkeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { api, errorMessage } from "@/lib/api/client"
 import { notify } from "@/lib/toast"
@@ -37,7 +38,7 @@ export default function PaymentSettingsPage() {
     <div className="max-w-2xl">
       <PageHeader title="Payment Settings" description="Choose which payment methods the till accepts" />
       <Card><CardContent className="p-0">
-        {error ? <p role="alert" className="p-6 text-sm text-red-600">{error}</p> : !methods ? <p role="status" className="p-6 text-sm text-gray-500">Loading…</p> : (
+        {error ? <p role="alert" className="p-6 text-sm text-red-600">{error}</p> : !methods ? <ListSkeleton rows={3} bordered={false} /> : (
           <Table><TableHeader><TableRow><TableHead>Method</TableHead><TableHead>Status</TableHead><TableHead>Enabled</TableHead></TableRow></TableHeader>
           <TableBody>{(Object.keys(LABELS) as (keyof Methods)[]).map((key) => (
             <TableRow key={key}>

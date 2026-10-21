@@ -94,6 +94,9 @@ const ROUTE_RULES: RouteRule[] = [
 ]
 
 export function routeAllowed(role: Role | undefined, pathname: string, config: IndustryConfig | null = null): boolean {
+  // The super admin has no business: they only see /admin, and nobody else does.
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return role === "admin"
+  if (role === "admin") return false
   if (pathname === "/notifications" || pathname.startsWith("/notifications/")) return !!role
   if (pathname === "/") return can(role, "pos.sell") && moduleOn(config, "pos")
   if (pathname === "/sales/new") return can(role, "pos.sell") && moduleOn(config, "pos")
@@ -111,7 +114,10 @@ export function routeAllowed(role: Role | undefined, pathname: string, config: I
 
 /** Where to send someone who has just signed in, or who tried a page they may not see. */
 export function landingFor(role: Role | undefined, config: IndustryConfig | null = null): string {
+  if (role === "admin") return "/admin"
   const items = navFor(role, config)
+  // Whoever may see the dashboard (owners and managers) starts there; people who only sell start at the till.
+  if (items.some((i) => i.href === "/overview")) return "/overview"
   if (items.some((i) => i.href === "/")) return "/"
   // before the industry is known, guess from what the role does
   if (!config) {

@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { ApiError, api, configureApi } from "@/lib/api/client"
 import { clean } from "@/lib/api/mappers"
+import { useUIStore } from "@/lib/stores/ui-store"
 import type { User } from "@/lib/types"
 
 interface LoginResult {
@@ -61,6 +62,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           const res = await api<LoginResult>("/auth/login", { method: "POST", public: true, body: { email, password, ...(totpCode ? { totpCode } : {}) } })
           set({ user: toUser(res.user), token: res.accessToken, refreshToken: res.refreshToken, isAuthenticated: true, isLoading: false, validated: true })
+          // a fresh sign-in starts with the menu closed; the person opens it themselves
+          useUIStore.getState().setSidebarOpen(false)
         } catch (error) {
           set({ isLoading: false })
           throw error
@@ -68,6 +71,7 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: async () => {
         const { refreshToken, token } = get()
+        const logoutPath = get().user?.role === "admin" ? "/admin/logout" : "/auth/logout"
         // Clear locally first so the UI leaves immediately; revoking on the server is best effort.
         set({ user: null, token: null, refreshToken: null, isAuthenticated: false, validated: false })
         const { useDataStore } = await import("@/lib/stores/data-store")
@@ -75,7 +79,7 @@ export const useAuthStore = create<AuthState>()(
         void import("@/lib/offline/snapshot").then((m) => m.clearSnapshot())
         if (token) {
           try {
-            await fetch(`${(await import("@/lib/api/client")).API_BASE}/auth/logout`, {
+            await fetch(`${(await import("@/lib/api/client")).API_BASE}${logoutPath}`, {
               method: "POST",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
               body: JSON.stringify(refreshToken ? { refreshToken } : {}),
@@ -84,7 +88,8 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       refreshUser: async () => {
-        const me = await api<Record<string, unknown>>("/auth/me")
+        // The super admin lives apart from every business and has their own "me".
+        const me = await api<Record<string, unknown>>(get().user?.role === "admin" ? "/admin/me" : "/auth/me")
         set({ user: toUser(me) })
       },
       updateUser: (updates) =>

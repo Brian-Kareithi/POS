@@ -3,11 +3,14 @@ import { persist } from "zustand/middleware"
 
 interface UIState {
   sidebarOpen: boolean
+  /** Wide screens only: the sidebar shrinks to icons. On a phone the sidebar is a drawer instead. */
+  sidebarCollapsed: boolean
   theme: "light" | "dark"
   /** "all" or a branch id; used to filter dashboards, sales and reports. */
   branchId: string
   setBranchId: (id: string) => void
   toggleSidebar: () => void
+  toggleSidebarCollapsed: () => void
   setSidebarOpen: (open: boolean) => void
   setTheme: (theme: "light" | "dark") => void
   toggleTheme: () => void
@@ -17,10 +20,12 @@ export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
       sidebarOpen: false,
+      sidebarCollapsed: false,
       theme: "light",
       branchId: "all",
       setBranchId: (branchId) => set({ branchId }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () =>
@@ -30,7 +35,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: "pos-ui",
-      partialize: (state) => ({ theme: state.theme, branchId: state.branchId }),
+      partialize: (state) => ({ theme: state.theme, branchId: state.branchId, sidebarCollapsed: state.sidebarCollapsed }),
     }
   )
 )

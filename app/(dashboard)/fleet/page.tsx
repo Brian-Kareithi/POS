@@ -1,5 +1,6 @@
 "use client"
 
+import { ListSkeleton } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import { api, errorMessage } from "@/lib/api/client"
 import { deliveriesApi } from "@/lib/api/deliveries"
@@ -66,7 +67,7 @@ export default function FleetPage() {
 
       <Card><CardContent className="p-0">
         {error ? <p role="alert" className="py-10 text-center text-sm text-red-600">{error}</p>
-          : loading ? <p className="py-10 text-center text-sm text-gray-500" role="status">Loading…</p>
+          : loading ? <ListSkeleton rows={5} bordered={false} />
           : rows.length === 0 ? <EmptyState icon={<Car className="h-10 w-10" />} title="No vehicles yet" description={manage ? "Add the vans, trucks and bikes you deliver with." : undefined} />
           : (
             <ul className="divide-y divide-gray-100">

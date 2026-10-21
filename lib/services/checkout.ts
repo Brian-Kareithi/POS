@@ -158,11 +158,12 @@ export async function completeSale(input: CheckoutInput): Promise<Sale> {
   }
 }
 
-export async function refundSale(saleId: string, kind: "refund" | "void", reason: string, approvalToken?: string) {
-  const sale = toSale(await api(`/sales/${saleId}/${kind}`, { method: "POST", body: { reason, ...(approvalToken ? { approvalToken } : {}) } }))
+/** `items` refunds only those lines (and how many units of each); leave it out to refund the whole sale, or whatever is left of it. */
+export async function refundSale(saleId: string, kind: "refund" | "void", reason: string, approvalToken?: string, items?: { saleItemId: string; quantity: number }[]) {
+  const sale = toSale(await api(`/sales/${saleId}/${kind}`, { method: "POST", body: { reason, ...(approvalToken ? { approvalToken } : {}), ...(items?.length ? { items } : {}) } }))
   useDataStore.getState().upsert("sales", sale)
   await Promise.allSettled([refresh.products(), sale.customerId ? refresh.customer(sale.customerId) : Promise.resolve()])
-  notify.success(kind === "refund" ? "Refund recorded" : "Sale voided", `${sale.receiptNumber ?? sale.orderNumber} · stock returned`)
+  notify.success(kind === "refund" ? (items?.length ? "Partial refund recorded" : "Refund recorded") : "Sale voided", `${sale.receiptNumber ?? sale.orderNumber} · stock returned`)
   return sale
 }
 

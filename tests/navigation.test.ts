@@ -8,7 +8,7 @@ const appointment: RecordTypeDef = {
   fields: [], statuses: [{ key: "booked", label: "Booked", tone: "info" }], closed: [],
 }
 const config = (modules: ModuleId[], recordTypes: RecordTypeDef[] = [], terms: Partial<IndustryConfig["terms"]> = {}): IndustryConfig => ({
-  industry: "other", label: "Test", icon: "layers", modules, recordTypes, roles: [],
+  industry: "retail", label: "Test", icon: "layers", modules, recordTypes, roles: [],
   terms: { pos: "POS", products: "Products", inventory: "Inventory", sales: "Sales", customers: "Customers", customer: "Customer", ...terms },
 })
 
@@ -73,6 +73,9 @@ describe("pages are guarded by industry and role", () => {
 
 describe("where people land", () => {
   it("sends sellers to the till and riders to their deliveries", () => {
+    expect(landingFor("owner", salon)).toBe("/overview")
+    expect(landingFor("manager")).toBe("/overview")
+    expect(landingFor("owner")).toBe("/overview") // before the industry has loaded
     expect(landingFor("cashier", salon)).toBe("/")
     expect(landingFor("rider", logistics)).toBe("/deliveries")
     expect(landingFor("dispatcher", logistics)).toBe("/deliveries")

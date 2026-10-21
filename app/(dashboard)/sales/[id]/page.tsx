@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { useDataStore } from "@/lib/stores/data-store"
@@ -18,7 +18,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ApprovalDialog } from "@/components/pos/approval-dialog"
 import { ReceiptDialog } from "@/components/pos/receipt-dialog"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { ArrowLeft, Printer, RefreshCw, ShoppingCart, Receipt, User, CreditCard, Ban, WifiOff } from "lucide-react"
+import { refundShare, refundState, unitsLeft } from "@/lib/utils/refunds"
+import { ArrowLeft, Printer, RefreshCw, ShoppingCart, Receipt, User, CreditCard, Ban, WifiOff, Minus, Plus, Undo2 } from "lucide-react"
 
 const refundReasons = ["Damaged item", "Wrong item", "Customer changed mind", "Expired product", "Pricing error"]
 const voidReasons = ["Wrong item scanned", "Duplicate sale", "Customer left without paying", "Cashier error"]
@@ -31,8 +32,15 @@ export default function SaleDetailPage() {
   const user = useAuthStore((s) => s.user)
   const [action, setAction] = useState<"refund" | "void" | null>(null)
   const [reprint, setReprint] = useState(false)
+  // how many units of each line to refund (item id -> count); lines not listed are not being refunded
+  const [picked, setPicked] = useState<Record<string, number>>({})
 
   const sale = sales.find((s) => s.id === params.id)
+  // "Refund" on the returns page lands here with ?refund=1: open the item picker straight away
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the address once, when the page opens
+    if (new URLSearchParams(window.location.search).get("refund") === "1") setAction("refund")
+  }, [])
   const customer = customers.find((c) => c.id === sale?.customerId)
   const cashier = users.find((u) => u.id === sale?.userId)
   const branch = branches.find((b) => b.id === sale?.branchId)
@@ -54,23 +62,36 @@ export default function SaleDetailPage() {
   }
 
   const needsApproval = !can(user?.role, "refund.issue")
+  const state = refundState(sale)
+  const items = sale.items ?? []
+  const pickedItems = items.map((i) => ({ item: i, qty: picked[i.id] ?? 0 })).filter((p) => p.qty > 0)
+  const pickedUnits = pickedItems.reduce((n, p) => n + p.qty, 0)
+  const pickedEstimate = pickedItems.reduce((sum, p) => sum + refundShare(p.item, p.qty), 0)
+  const allLeft = items.reduce((n, i) => n + unitsLeft(i), 0)
+  const net = sale.total - (sale.refundedAmount ?? 0)
+  const setQty = (id: string, max: number, qty: number) => setPicked((p) => ({ ...p, [id]: Math.max(0, Math.min(max, qty)) }))
+  const openRefund = () => { setPicked({}); setAction("refund") }
+
   const confirm = async ({ reason, approvalToken }: { reason: string; approvalToken?: string }) => {
     // Errors are shown inside the dialog, which stays open until the server accepts the change.
-    await refundSale(sale.id, action ?? "refund", reason, approvalToken)
+    // Picking every unit left means the whole sale, which the server treats as an ordinary full refund.
+    const lines = action === "refund" ? pickedItems.map((p) => ({ saleItemId: p.item.id, quantity: p.qty })) : undefined
+    await refundSale(sale.id, action ?? "refund", reason, approvalToken, lines)
     setAction(null)
   }
 
-  const statusVariant = sale.status === "completed" ? "success" : sale.status === "refunded" || sale.status === "cancelled" ? "danger" : "default"
+  const statusLabel = state === "partial" ? "partly refunded" : state === "full" ? "refunded" : sale.status
+  const statusVariant = state === "partial" ? "warning" : state === "full" || sale.status === "refunded" || sale.status === "cancelled" ? "danger" : sale.status === "completed" ? "success" : "default"
 
   return (
     <div className="space-y-6">
       <PageHeader title={`Sale ${sale.receiptNumber ?? sale.orderNumber}`} description={`Placed on ${formatDateTime(sale.createdAt)}`}>
         {can(user?.role, "pos.sell") && <Link href="/"><Button><ShoppingCart className="h-4 w-4" />New Sale</Button></Link>}
         <Button variant="secondary" onClick={() => setReprint(true)}><Printer className="h-4 w-4" />Reprint receipt</Button>
-        {sale.status === "completed" && (
+        {sale.status === "completed" && state !== "full" && (
           <>
-            <Button variant="secondary" onClick={() => setAction("void")}><Ban className="h-4 w-4" />Void</Button>
-            <Button variant="danger" onClick={() => setAction("refund")}><RefreshCw className="h-4 w-4" />Refund</Button>
+            {state === "none" && <Button variant="secondary" onClick={() => setAction("void")}><Ban className="h-4 w-4" />Void</Button>}
+            <Button variant="danger" onClick={openRefund}><RefreshCw className="h-4 w-4" />Refund</Button>
           </>
         )}
         <Button variant="secondary" onClick={() => router.push("/sales")}><ArrowLeft className="h-4 w-4" />Back</Button>
@@ -89,7 +110,7 @@ export default function SaleDetailPage() {
         <Card><CardContent className="py-4 space-y-2">
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2"><Receipt className="h-4 w-4 text-gray-400" />Order Details</p>
           <div className="flex justify-between text-sm"><span className="text-gray-500">Receipt</span><span className="font-medium">{sale.receiptNumber ?? sale.orderNumber}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Status</span><Badge variant={statusVariant}>{sale.status}</Badge></div>
+          <div className="flex justify-between text-sm"><span className="text-gray-500">Status</span><Badge variant={statusVariant}>{statusLabel}</Badge></div>
           <div className="flex justify-between text-sm"><span className="text-gray-500">Served by</span><span>{cashier?.name ?? "-"}</span></div>
           <div className="flex justify-between text-sm"><span className="text-gray-500">Branch</span><span>{branch?.name ?? "-"}</span></div>
         </CardContent></Card>
@@ -126,7 +147,7 @@ export default function SaleDetailPage() {
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.product?.name || getProductName(item.productId)}</TableCell>
                     <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{item.quantity}{(item.refundedQty ?? 0) > 0 && <span className="ml-1.5 inline-flex rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700">{item.refundedQty} refunded</span>}</TableCell>
                     <TableCell>{formatCurrency(item.discount)}</TableCell>
                     <TableCell className="font-medium">{formatCurrency(item.total)}</TableCell>
                   </TableRow>
@@ -139,25 +160,86 @@ export default function SaleDetailPage() {
         </CardContent>
       </Card>
 
+      {(sale.refunds?.length ?? 0) > 0 && (
+        <Card>
+          <CardHeader><h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900"><Undo2 className="h-4 w-4 text-gray-400" />Refunds ({sale.refunds?.length})</h3></CardHeader>
+          <CardContent className="divide-y divide-gray-100 p-0">
+            {sale.refunds?.map((r) => (
+              <div key={r.id} className="px-4 py-3 text-sm sm:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium text-gray-900">{formatCurrency(r.amount)} · {r.reason}</span>
+                  <span className="text-xs text-gray-500">{formatDateTime(r.createdAt)}{r.approvedBy ? ` · approved by ${r.approvedBy}` : ""}</span>
+                </div>
+                <p className="text-gray-600">{r.items.map((ri) => `${ri.quantity} x ${items.find((i) => i.id === ri.saleItemId)?.name ?? getProductName(items.find((i) => i.id === ri.saleItemId)?.productId ?? "")}`).join(", ")}</p>
+                <p className="text-xs text-gray-500">{[r.cashAmount > 0 && `${formatCurrency(r.cashAmount)} back from the till`, r.creditAmount > 0 && `${formatCurrency(r.creditAmount)} taken off what the customer owed`, r.amount - r.cashAmount - r.creditAmount > 0.005 && `${formatCurrency(r.amount - r.cashAmount - r.creditAmount)} to return by card, M-Pesa or bank`].filter(Boolean).join(" · ")}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="max-w-md ml-auto">
         <CardContent className="py-4 space-y-2">
           <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(sale.subtotal)}</span></div>
           <div className="flex justify-between text-sm"><span className="text-gray-500">VAT included</span><span>{formatCurrency(sale.taxTotal)}</span></div>
           <div className="flex justify-between text-sm"><span className="text-gray-500">Discount{sale.couponCode ? ` (${sale.couponCode})` : ""}</span><span className="text-red-600">-{formatCurrency(sale.discountTotal)}</span></div>
           <div className="border-t border-gray-200 pt-2 flex justify-between text-lg font-bold"><span>Total</span><span>{formatCurrency(sale.total)}</span></div>
+          {(sale.refundedAmount ?? 0) > 0 && (
+            <>
+              <div className="flex justify-between text-sm"><span className="text-orange-700">Refunded so far</span><span className="text-orange-700">-{formatCurrency(sale.refundedAmount ?? 0)}</span></div>
+              <div className="flex justify-between text-sm font-semibold"><span>Kept after refunds</span><span>{formatCurrency(net)}</span></div>
+            </>
+          )}
         </CardContent>
       </Card>
 
       <ApprovalDialog
         open={action !== null}
-        title={action === "void" ? "Void sale" : "Refund sale"}
-        description={`${sale.receiptNumber ?? sale.orderNumber} · ${formatCurrency(sale.total)}. Stock goes back on the shelf and the action is written to the audit log.`}
+        title={action === "void" ? "Void sale" : "Refund items"}
+        size={action === "refund" ? "md" : "sm"}
+        description={action === "refund"
+          ? `${sale.receiptNumber ?? sale.orderNumber}. Choose what the customer is returning. Those items go back on the shelf, and the action is written to the audit log.`
+          : `${sale.receiptNumber ?? sale.orderNumber} · ${formatCurrency(sale.total)}. Stock goes back on the shelf and the action is written to the audit log.`}
         reasons={action === "void" ? voidReasons : refundReasons}
         needsApproval={needsApproval}
-        confirmLabel={action === "void" ? "Void sale" : "Confirm refund"}
+        confirmLabel={action === "void" ? "Void sale" : pickedUnits > 0 ? `Refund ${formatCurrency(pickedUnits === allLeft ? net : pickedEstimate)}` : "Choose items to refund"}
+        confirmDisabled={action === "refund" && pickedUnits === 0}
         onClose={() => setAction(null)}
         onConfirm={confirm}
-      />
+      >
+        {action === "refund" && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-900">Items on this sale</p>
+              <button type="button" className="text-xs font-semibold text-blue-600 hover:underline" onClick={() => setPicked(Object.fromEntries(items.map((i) => [i.id, unitsLeft(i)])))}>Select everything left</button>
+            </div>
+            <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200">
+              {items.map((i) => {
+                const left = unitsLeft(i)
+                const qty = picked[i.id] ?? 0
+                return (
+                  <li key={i.id} className="flex items-center gap-3 px-3 py-2.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-gray-900">{i.name ?? getProductName(i.productId)}</span>
+                      <span className="block text-xs text-gray-500">{formatCurrency(i.unitPrice)} each · {left > 0 ? `${left} of ${i.quantity} can be refunded` : "already refunded"}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1" role="group" aria-label={`Units of ${i.name ?? "item"} to refund`}>
+                      <button type="button" aria-label="One less" disabled={qty <= 0} onClick={() => setQty(i.id, left, qty - 1)} className="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"><Minus className="h-4 w-4" /></button>
+                      <span className="w-6 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
+                      <button type="button" aria-label="One more" disabled={qty >= left} onClick={() => setQty(i.id, left, qty + 1)} className="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"><Plus className="h-4 w-4" /></button>
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="text-xs text-gray-500">
+              {pickedUnits > 0
+                ? `${pickedUnits} item${pickedUnits === 1 ? "" : "s"} selected. The customer is refunded ${pickedUnits === allLeft ? "everything that is left" : "about " + formatCurrency(pickedEstimate)}; the system works out the exact amount, including any discount and VAT.`
+                : "Use + to choose how many of each item come back."}
+            </p>
+          </div>
+        )}
+      </ApprovalDialog>
       <ReceiptDialog sale={reprint ? sale : null} reprint onClose={() => setReprint(false)} />
     </div>
   )
