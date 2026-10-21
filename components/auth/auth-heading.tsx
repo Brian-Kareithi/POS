@@ -1,8 +1,8 @@
 export function AuthHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="mb-7">
-      <h2 className="text-2xl font-bold tracking-tight text-gray-900">{title}</h2>
-      {subtitle && <p className="mt-1.5 text-sm leading-6 text-gray-500">{subtitle}</p>}
+    <div className="mb-7 text-center">
+      <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{title}</h2>
+      {subtitle && <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-gray-500">{subtitle}</p>}
     </div>
   )
 }

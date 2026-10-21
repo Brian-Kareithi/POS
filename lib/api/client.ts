@@ -32,6 +32,8 @@ export interface RequestOptions {
   /** Skip the Authorization header and the refresh-on-401 behaviour. */
   public?: boolean
   signal?: AbortSignal
+  /** Give up after this long and report the server as unreachable. For a till on a slow line, a wait is worse than going offline. */
+  timeoutMs?: number
 }
 
 function buildUrl(path: string, query?: RequestOptions["query"]) {
@@ -68,7 +70,7 @@ async function send(path: string, opts: RequestOptions, isForm: boolean) {
     method: opts.method ?? "GET",
     headers,
     body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
-    signal: opts.signal,
+    signal: opts.timeoutMs ? (opts.signal ? AbortSignal.any([opts.signal, AbortSignal.timeout(opts.timeoutMs)]) : AbortSignal.timeout(opts.timeoutMs)) : opts.signal,
   })
 }
 

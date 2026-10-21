@@ -72,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, token: null, refreshToken: null, isAuthenticated: false, validated: false })
         const { useDataStore } = await import("@/lib/stores/data-store")
         useDataStore.getState().reset()
+        void import("@/lib/offline/snapshot").then((m) => m.clearSnapshot())
         if (token) {
           try {
             await fetch(`${(await import("@/lib/api/client")).API_BASE}/auth/logout`, {

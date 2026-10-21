@@ -2,7 +2,7 @@ import { create } from "zustand"
 import type {
   Business, Branch, Warehouse, Category, Brand, Supplier,
   Product, Customer, CustomerGroup, Employee, Notification, User,
-  Sale, PurchaseOrder, StockTransfer, Transaction, StockAdjustment, AuditLog, ShiftRecord, Promotion, Coupon,
+  IndustryConfig, Sale, PurchaseOrder, StockTransfer, Transaction, StockAdjustment, AuditLog, ShiftRecord, Promotion, Coupon,
 } from "@/lib/types"
 
 /** Server data cached in memory. It is loaded after sign-in and never persisted, so it can't go stale across sessions or users. */
@@ -33,10 +33,16 @@ export type CollectionKey = keyof Collections
 
 interface DataState extends Collections {
   business: Business | null
+  /** The tabs, vocabulary, roles and record types this business gets from its industry. */
+  industry: IndustryConfig | null
+  /** Set when the screen is showing the copy saved on this device because the server could not be reached. */
+  offlineSnapshotAt: string | null
   /** True once the first load after sign-in has finished (successfully or not). */
   loaded: boolean
   loadError: string | null
   setBusiness: (business: Business | null) => void
+  setIndustry: (industry: IndustryConfig | null) => void
+  setOfflineSnapshotAt: (at: string | null) => void
   setLoaded: (loaded: boolean, error?: string | null) => void
   setCollection: <K extends CollectionKey>(key: K, rows: Collections[K]) => void
   /** Replace the row with the same id, or add it (at the front when `prepend`). */
@@ -46,8 +52,8 @@ interface DataState extends Collections {
   reset: () => void
 }
 
-const empty: Collections & { business: null; loaded: boolean; loadError: null } = {
-  business: null, loaded: false, loadError: null,
+const empty: Collections & { business: null; industry: null; offlineSnapshotAt: null; loaded: boolean; loadError: null } = {
+  business: null, industry: null, offlineSnapshotAt: null, loaded: false, loadError: null,
   branches: [], warehouses: [], categories: [], brands: [], suppliers: [], products: [], customers: [], customerGroups: [],
   users: [], employees: [], notifications: [], sales: [], purchaseOrders: [], stockTransfers: [], transactions: [],
   stockAdjustments: [], auditLogs: [], shiftRecords: [], promotions: [], coupons: [],
@@ -58,6 +64,8 @@ type Row = { id: string }
 export const useDataStore = create<DataState>()((set) => ({
   ...empty,
   setBusiness: (business) => set({ business }),
+  setIndustry: (industry) => set({ industry }),
+  setOfflineSnapshotAt: (offlineSnapshotAt) => set({ offlineSnapshotAt }),
   setLoaded: (loaded, error = null) => set({ loaded, loadError: error }),
   setCollection: (key, rows) => set({ [key]: rows } as Partial<DataState>),
   upsert: (key, row, prepend = false) =>

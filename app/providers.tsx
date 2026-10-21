@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useEffect } from "react"
+import { registerOfflineSupport } from "@/lib/offline/register"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { Toaster } from "@/components/ui/toaster"
 
@@ -20,6 +21,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark")
   }, [theme])
+
+  useEffect(() => { registerOfflineSupport() }, [])
 
   return (
     <QueryClientProvider client={queryClient}>

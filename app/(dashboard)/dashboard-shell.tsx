@@ -7,7 +7,7 @@ import { routeAllowed, landingFor } from "@/lib/navigation"
 import { notificationsFor } from "@/lib/notifications"
 import { useInitializeData, reloadData } from "@/lib/hooks/use-initialize-data"
 import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
-import { syncPendingSales } from "@/lib/services/checkout"
+import { useOfflineSync } from "@/lib/hooks/use-offline-sync"
 import { useDataStore } from "@/lib/stores/data-store"
 import { useNotificationStore } from "@/lib/stores/notification-store"
 import { ShellSkeleton } from "@/components/ui/skeleton"
@@ -23,7 +23,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated && !!s.token)
   const role = useAuthStore((s) => s.user?.role)
   const user = useAuthStore((s) => s.user)
-  const allowed = routeAllowed(role, pathname)
+  const industry = useDataStore((s) => s.industry)
+  const allowed = routeAllowed(role, pathname, industry)
   const notifications = useDataStore((s) => s.notifications)
   const loaded = useDataStore((s) => s.loaded)
   const loadError = useDataStore((s) => s.loadError)
@@ -39,14 +40,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   useInitializeData(ready && isAuthenticated)
   useNotificationStream(ready && isAuthenticated && loaded)
 
-  // Upload any sales rung up offline as soon as the data is loaded or the connection returns.
-  useEffect(() => {
-    if (!loaded) return
-    void syncPendingSales()
-    const online = () => void syncPendingSales()
-    window.addEventListener("online", online)
-    return () => window.removeEventListener("online", online)
-  }, [loaded])
+  // Upload any sales rung up offline: when the data is loaded, when the connection returns, and on a backing-off timer.
+  useOfflineSync(loaded && isAuthenticated)
 
   useEffect(() => {
     if (ready && !isAuthenticated) {
@@ -55,8 +50,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [ready, isAuthenticated, router])
 
   useEffect(() => {
-    if (ready && isAuthenticated && !allowed) router.replace(landingFor(role))
-  }, [ready, isAuthenticated, allowed, role, router])
+    if (ready && isAuthenticated && !allowed) router.replace(landingFor(role, industry))
+  }, [ready, isAuthenticated, allowed, role, industry, router])
 
   useEffect(() => {
     const unread = notificationsFor(notifications, user).filter((n) => !n.read).length

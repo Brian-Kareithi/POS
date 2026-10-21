@@ -5,6 +5,7 @@ import { useAuthStore } from "@/lib/stores/auth-store"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { useNotificationStore } from "@/lib/stores/notification-store"
 import { BranchSwitcher, ConnectionStatus } from "@/components/layout/nav-status"
+import { ClockWidget } from "@/components/layout/clock-widget"
 import { ROLE_LABELS, can } from "@/lib/permissions"
 import { SearchInput } from "@/components/ui/search-input"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
@@ -68,6 +69,7 @@ export function Navbar() {
 
       <div className="flex items-center gap-1 sm:gap-2">
         <BranchSwitcher />
+        {can(user?.role, "time.clock") && <ClockWidget />}
         <ConnectionStatus />
         {can(user?.role, "pos.sell") && <Link
           href="/sales/new"

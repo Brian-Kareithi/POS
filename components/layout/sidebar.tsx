@@ -20,7 +20,8 @@ export function Sidebar() {
   const router = useRouter()
 
   const pendingStaff = useDataStore((s) => s.employees.filter((e) => e.approval === "pending").length)
-  const navItems = navFor(user?.role)
+  const industry = useDataStore((s) => s.industry)
+  const navItems = navFor(user?.role, industry)
   const current = activeHref(pathname, navItems)
 
   return (
@@ -48,7 +49,7 @@ export function Sidebar() {
         </div>
 
         <div className="px-6 py-2 border-b border-gray-100">
-          <p className="text-xs text-gray-400">{user ? ROLE_LABELS[user.role] : "User"}</p>
+          <p className="text-xs text-gray-400">{user ? (industry?.roles.find((r) => r.role === user.role)?.label ?? ROLE_LABELS[user.role]) : "User"}{industry ? ` · ${industry.label}` : ""}</p>
           <p className="text-sm font-medium text-gray-700">{user?.name || ""}</p>
         </div>
 

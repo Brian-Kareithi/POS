@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { api } from "@/lib/api/client"
-import type { Product } from "@/lib/types"
+import type { Product, Sale } from "@/lib/types"
 
 export interface HeldSale {
   id: string
@@ -27,8 +27,18 @@ interface HeldCart {
 
 export interface QueuedSale {
   idempotencyKey: string
+  /** When the sale really happened (the server books it to the shift that was open then). */
   occurredAt: string
   payload: Record<string, unknown>
+  /** Whoever rang it up: it is only ever uploaded under their sign-in. */
+  userId?: string
+  /** The receipt shown to the customer, kept so the sale stays visible until the server has it. */
+  sale?: Sale
+  /** "pending" uploads by itself; "needs_attention" was refused and waits for a person to retry or discard it. */
+  status?: "pending" | "needs_attention"
+  error?: { code?: string; message: string }
+  attempts?: number
+  lastTriedAt?: string
 }
 
 interface PosState {
@@ -43,6 +53,10 @@ interface PosState {
   discardHeld: (id: string) => Promise<void>
   enqueue: (sale: QueuedSale) => void
   dequeue: (keys: string[]) => void
+  /** Records the outcome of an upload attempt for one queued sale. */
+  markAttempt: (key: string, result: { status: "pending" | "needs_attention"; error?: { code?: string; message: string } }) => void
+  /** Puts a refused sale back in line to be uploaded again. */
+  retry: (key: string) => void
   setOfflineMode: (offline: boolean) => void
 }
 
@@ -93,14 +107,20 @@ export const usePosStore = create<PosState>()(
       },
       enqueue: (sale) => set((s) => ({ queue: [...s.queue, sale] })),
       dequeue: (keys) => set((s) => ({ queue: s.queue.filter((q) => !keys.includes(q.idempotencyKey)) })),
+      markAttempt: (key, result) =>
+        set((s) => ({
+          queue: s.queue.map((q) => (q.idempotencyKey === key ? { ...q, status: result.status, error: result.error, attempts: (q.attempts ?? 0) + 1, lastTriedAt: new Date().toISOString() } : q)),
+        })),
+      retry: (key) => set((s) => ({ queue: s.queue.map((q) => (q.idempotencyKey === key ? { ...q, status: "pending", error: undefined } : q)) })),
       setOfflineMode: (offlineMode) => set({ offlineMode }),
     }),
     {
       name: "pos-session",
-      version: 2,
+      version: 3,
       // Only the offline queue must survive a reload; held sales live on the server.
       partialize: (s) => ({ queue: s.queue }),
-      migrate: () => ({ queue: [] }) as never,
+      // Never drop sales that are waiting to upload when the format changes.
+      migrate: (old) => ({ queue: ((old as { queue?: QueuedSale[] } | null)?.queue ?? []).map((q) => ({ status: "pending" as const, ...q })) }) as never,
     }
   )
 )

@@ -70,19 +70,17 @@ export default function LoginPage() {
         <div className="flex justify-end">
           <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700">Forgot password?</Link>
         </div>
-        <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>Sign in</Button>
+        <Button type="submit" size="lg" className="w-full rounded-full" isLoading={isSubmitting} disabled={isSubmitting}>Sign in</Button>
       </form>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        <Link href="/register" className="rounded-xl border border-gray-200 p-4 transition-colors hover:border-blue-300 hover:bg-blue-50">
-          <span className="block text-sm font-semibold text-gray-900">Own a business?</span>
-          <span className="mt-0.5 block text-xs leading-5 text-gray-500">Create your business and owner account.</span>
-        </Link>
-        <div className="rounded-xl border border-dashed border-gray-200 p-4">
-          <span className="block text-sm font-semibold text-gray-900">Joining a team?</span>
-          <span className="mt-0.5 block text-xs leading-5 text-gray-500">Use the join link your employer shared.</span>
-        </div>
+      <div className="my-6 flex items-center gap-3 text-xs text-gray-400">
+        <span className="h-px flex-1 bg-gray-200" />Or<span className="h-px flex-1 bg-gray-200" />
       </div>
+
+      <Link href="/register" className="flex w-full items-center justify-center rounded-full border border-gray-200 px-4 py-3 text-sm font-medium text-gray-900 transition-colors hover:border-blue-300 hover:bg-blue-50">
+        Create a business account
+      </Link>
+      <p className="mt-6 text-center text-xs text-gray-500">Joining a team? Use the join link your employer shared.</p>
     </div>
   )
 }

@@ -9,16 +9,25 @@ export interface User {
   phone?: string
   emailVerified: boolean
   twoFactorEnabled: boolean
+  /** What kind of business this person works for. It decides the tabs they see. */
+  industry?: Industry
   createdAt: string
   updatedAt: string
 }
 
-export type Role = "owner" | "manager" | "cashier" | "stockkeeper"
+export type Role =
+  | "owner" | "manager" | "cashier" | "stockkeeper"
+  | "dispatcher" | "rider" | "driver" | "warehouse_clerk" | "waiter" | "kitchen" | "stylist" | "pharmacist" | "technician" | "instructor" | "front_desk"
+
+export type Industry =
+  | "retail" | "hardware_building" | "ecommerce_omnichannel" | "hospitality" | "beauty_wellness" | "healthcare_pharmacy" | "fuel_automotive"
+  | "logistics" | "warehousing_distribution" | "education" | "events_entertainment" | "agriculture" | "property_rental" | "professional_services" | "other"
 
 export interface Business {
   id: string
   name: string
   slug: string
+  industry?: Industry
   email: string
   phone: string
   address: string
@@ -458,4 +467,180 @@ export interface Promotion {
   endsAt: string
   isActive: boolean
   uses: number
+}
+
+// ---------------------------------------------------------------- industries
+
+export type ModuleId =
+  | "dashboard" | "pos" | "products" | "inventory" | "sales" | "promotions" | "customers" | "insights" | "shifts"
+  | "staff" | "hours" | "accounting" | "reports" | "audit" | "settings" | "deliveries" | "fleet"
+
+export type FieldKind = "text" | "textarea" | "number" | "money" | "date" | "datetime" | "select" | "phone" | "boolean"
+export interface FieldDef { key: string; label: string; kind: FieldKind; required?: boolean; options?: string[]; placeholder?: string }
+export type Tone = "neutral" | "info" | "success" | "warning" | "danger"
+export interface StatusDef { key: string; label: string; tone: Tone }
+
+export interface RecordTypeDef {
+  key: string
+  label: string
+  plural: string
+  description: string
+  numberPrefix: string
+  titleField: string
+  fields: FieldDef[]
+  statuses: StatusDef[]
+  closed: string[]
+  scheduled?: { label: string; kind: "date" | "datetime"; required?: boolean }
+  amount?: { label: string }
+  assignee?: { label: string; roles: Role[] }
+  customer?: boolean
+}
+
+export interface Terms { pos: string; products: string; inventory: string; sales: string; customers: string; customer: string }
+
+/** What the server says a business of this industry gets: its tabs, vocabulary, roles and record types. */
+export interface IndustryConfig {
+  industry: Industry
+  label: string
+  icon: string
+  modules: ModuleId[]
+  terms: Terms
+  roles: { role: Role; label: string; description: string }[]
+  recordTypes: RecordTypeDef[]
+}
+
+export interface IndustryOption {
+  id: Industry
+  label: string
+  description: string
+  icon: string
+  modules: ModuleId[]
+  roles: string[]
+  recordTypes: string[]
+}
+
+export interface IndustryRecord {
+  id: string
+  type: string
+  number: string
+  title: string
+  status: string
+  assigneeId?: string
+  assigneeName?: string
+  customerId?: string
+  customer?: { id: string; name: string; phone?: string }
+  scheduledAt?: string
+  amount?: number
+  data: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}
+
+// ---------------------------------------------------------------- deliveries & fleet
+
+export type DeliveryStatus = "pending" | "assigned" | "loaded" | "in_transit" | "delivered" | "failed" | "returned" | "cancelled"
+export type VehicleStatus = "available" | "on_trip" | "maintenance" | "retired"
+export type VehicleType = "bicycle" | "motorbike" | "tuk_tuk" | "car" | "van" | "pickup" | "truck" | "lorry" | "other"
+
+export interface DeliveryItem {
+  id: string
+  productId?: string
+  name: string
+  quantity: number
+  loadedQty?: number
+  deliveredQty?: number
+  shortfallReason?: string
+}
+
+export interface DeliveryEvent { id: string; userName: string; type: string; detail: string; createdAt: string }
+
+export interface Delivery {
+  id: string
+  number: string
+  saleId?: string
+  customerId?: string
+  recipientName: string
+  recipientPhone?: string
+  address: string
+  notes?: string
+  priority: "normal" | "urgent"
+  status: DeliveryStatus
+  riderId?: string
+  vehicleId?: string
+  rider?: { id: string; name: string; phone?: string }
+  vehicle?: { id: string; plate: string; type: VehicleType }
+  scheduledFor?: string
+  loadedAt?: string
+  startedAt?: string
+  deliveredAt?: string
+  closedReason?: string
+  codAmount?: number
+  codCollected?: number
+  receivedBy?: string
+  proofNote?: string
+  hasDiscrepancy: boolean
+  items: DeliveryItem[]
+  events?: DeliveryEvent[]
+  createdAt: string
+}
+
+export interface Vehicle {
+  id: string
+  plate: string
+  name?: string
+  type: VehicleType
+  capacityKg?: number
+  status: VehicleStatus
+  insuranceExpiry?: string
+  inspectionExpiry?: string
+  insuranceStatus: "ok" | "expiring" | "expired"
+  inspectionStatus: "ok" | "expiring" | "expired"
+  openDeliveries: number
+  notes?: string
+  isActive: boolean
+}
+
+export interface Rider { id: string; name: string; phone?: string; role: Role; openDeliveries: number }
+
+// ---------------------------------------------------------------- hours
+
+export interface WorkBreakRow { id: string; startedAt: string; endedAt?: string }
+export interface WorkSession {
+  id: string
+  userId: string
+  clockInAt: string
+  clockOutAt?: string
+  source: "manual" | "shift"
+  autoClosed: boolean
+  note?: string
+  adjustedNote?: string
+  breaks: WorkBreakRow[]
+  workedMinutes: number
+  breakMinutes: number
+  onClockMinutes: number
+  open: boolean
+  onBreak: boolean
+  stale: boolean
+}
+
+export interface HoursPerson {
+  userId: string
+  name: string
+  role: Role
+  sessions: number
+  daysWorked: number
+  workedMinutes: number
+  breakMinutes: number
+  avgMinutesPerDay: number
+  openNow: boolean
+  onBreakNow: boolean
+  needsReview: number
+  byDay: { date: string; minutes: number }[]
+}
+
+export interface HoursReport {
+  range: { from: string; to: string; timezone: string }
+  maxSessionHours: number
+  totals: { workedMinutes: number; breakMinutes: number; needsReview: number }
+  people: HoursPerson[]
 }

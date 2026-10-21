@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useForm, useWatch } from "react-hook-form"
+import { useForm, useWatch, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { api } from "@/lib/api/client"
@@ -15,9 +15,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PasswordInput, PasswordStrength } from "@/components/auth/password-input"
 import { AuthAlert, AuthHeading } from "@/components/auth/auth-heading"
+import { IndustryPicker } from "@/components/auth/industry-picker"
 import { Building2, Mail, Phone, UserRound } from "lucide-react"
 
 const registerSchema = z.object({
+  industry: z.string().min(1, "Choose the kind of business you run"),
   businessName: z.string().trim().min(2, "Business name must be at least 2 characters").max(120, "Business name is too long"),
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   email: z.string().trim().email("Enter a valid email address").max(254),
@@ -34,7 +36,7 @@ export default function RegisterPage() {
   const login = useAuthStore((s) => s.login)
   const signedIn = useAuthStore((s) => s.isAuthenticated && !!s.token)
   const [error, setError] = useState<string | null>(null)
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<Form>({ resolver: zodResolver(registerSchema) })
+  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<Form>({ resolver: zodResolver(registerSchema), defaultValues: { industry: "" } })
   const password = useWatch({ control, name: "password" }) ?? ""
 
   // Someone who already has a session has no business on the sign-up page.
@@ -47,7 +49,7 @@ export default function RegisterPage() {
     try {
       await api("/auth/register-business", {
         method: "POST", public: true,
-        body: { businessName: data.businessName, name: data.name, email: data.email, password: data.password, ...(data.phone ? { phone: data.phone } : {}) },
+        body: { businessName: data.businessName, industry: data.industry, name: data.name, email: data.email, password: data.password, ...(data.phone ? { phone: data.phone } : {}) },
       })
     } catch (e) {
       const message = authFailure(e).message
@@ -70,6 +72,9 @@ export default function RegisterPage() {
       <AuthHeading title="Create your business" subtitle="You'll be the owner. Your staff can then join with a link you share, and you decide who gets in and what they can do." />
       {error && <AuthAlert>{error}</AuthAlert>}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <Controller control={control} name="industry" render={({ field }) => (
+          <IndustryPicker value={field.value as never} onChange={field.onChange} error={errors.industry?.message} />
+        )} />
         <Input label="Business name" autoComplete="organization" icon={<Building2 className="h-4 w-4" />} placeholder="Jamii Retail" error={errors.businessName?.message} {...register("businessName")} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Your full name" autoComplete="name" icon={<UserRound className="h-4 w-4" />} placeholder="Kamau Mwangi" error={errors.name?.message} {...register("name")} />

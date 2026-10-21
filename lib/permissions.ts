@@ -6,19 +6,37 @@ export type Permission =
   | "purchase.manage" | "customers.manage" | "expenses.manage" | "reports.view"
   | "reports.export" | "dashboard.view" | "staff.view" | "staff.manage" | "settings.manage"
   | "audit.view" | "shift.manage" | "branches.all" | "backup.manage"
+  | "deliveries.view" | "deliveries.manage" | "deliveries.load" | "deliveries.fulfil" | "fleet.manage"
+  | "records.view" | "records.manage" | "time.clock" | "hours.view" | "hours.manage"
 
 const ALL: Permission[] = [
   "pos.sell", "sales.view", "discount.small", "discount.any", "price.change", "refund.issue", "void.sale",
   "products.view", "products.edit", "stock.edit", "purchase.manage", "customers.manage", "expenses.manage",
   "reports.view", "reports.export", "dashboard.view", "staff.view", "staff.manage", "settings.manage",
   "audit.view", "shift.manage", "branches.all", "backup.manage",
+  "deliveries.view", "deliveries.manage", "deliveries.load", "deliveries.fulfil", "fleet.manage",
+  "records.view", "records.manage", "time.clock", "hours.view", "hours.manage",
 ]
 
+const SELLER: Permission[] = ["pos.sell", "sales.view", "discount.small", "products.view", "customers.manage", "shift.manage", "time.clock"]
+
+// Mirrors src/auth/permissions.ts on the server, which is the one that actually enforces. This copy only decides what to show.
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   owner: ALL,
-  manager: ALL.filter((p) => !["staff.manage", "settings.manage", "backup.manage"].includes(p)),
-  cashier: ["pos.sell", "sales.view", "discount.small", "products.view", "customers.manage", "shift.manage"],
-  stockkeeper: ["products.view", "products.edit", "stock.edit", "purchase.manage"],
+  manager: ALL.filter((p) => !["staff.manage", "settings.manage", "backup.manage", "deliveries.fulfil", "hours.manage"].includes(p)),
+  cashier: [...SELLER, "records.view", "records.manage"],
+  stockkeeper: ["products.view", "products.edit", "stock.edit", "purchase.manage", "deliveries.view", "deliveries.load", "records.view", "time.clock"],
+  dispatcher: ["products.view", "sales.view", "customers.manage", "deliveries.view", "deliveries.manage", "deliveries.load", "records.view", "records.manage", "time.clock"],
+  rider: ["deliveries.fulfil", "time.clock"],
+  driver: ["deliveries.fulfil", "time.clock"],
+  warehouse_clerk: ["products.view", "products.edit", "stock.edit", "purchase.manage", "deliveries.view", "deliveries.load", "records.view", "records.manage", "time.clock"],
+  waiter: [...SELLER, "records.view", "records.manage"],
+  kitchen: ["products.view", "stock.edit", "records.view", "records.manage", "time.clock"],
+  stylist: [...SELLER, "records.view", "records.manage"],
+  pharmacist: [...SELLER, "products.edit", "stock.edit", "records.view", "records.manage"],
+  technician: ["products.view", "customers.manage", "records.view", "records.manage", "time.clock"],
+  instructor: ["customers.manage", "records.view", "records.manage", "time.clock"],
+  front_desk: [...SELLER, "records.view", "records.manage"],
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -26,13 +44,35 @@ export const ROLE_LABELS: Record<Role, string> = {
   manager: "Manager",
   cashier: "Cashier",
   stockkeeper: "Stockkeeper",
+  dispatcher: "Dispatcher",
+  rider: "Rider / Courier",
+  driver: "Driver",
+  warehouse_clerk: "Warehouse clerk",
+  waiter: "Waiter / Server",
+  kitchen: "Kitchen / Bar",
+  stylist: "Stylist / Therapist",
+  pharmacist: "Pharmacist",
+  technician: "Technician / Mechanic",
+  instructor: "Instructor / Teacher",
+  front_desk: "Front desk / Receptionist",
 }
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   owner: "Full control, including staff, settings and backups.",
-  manager: "Runs the shop: approvals, prices, refunds, stock, reports.",
+  manager: "Runs the business: approvals, prices, refunds, stock, reports.",
   cashier: "Fast checkout, small discounts, customers and own shift.",
   stockkeeper: "Products, stock counts, purchase orders and goods received.",
+  dispatcher: "Creates deliveries, assigns riders and vehicles, follows every trip.",
+  rider: "Sees only their own deliveries; confirms what was loaded and what was handed over.",
+  driver: "Drives a van or truck on assigned deliveries; confirms loads and drop-offs.",
+  warehouse_clerk: "Receives, picks, packs and loads goods; checks nothing is missing.",
+  waiter: "Takes orders and payments at the table or counter.",
+  kitchen: "Sees and updates the orders to prepare.",
+  stylist: "Serves clients, takes bookings and payments.",
+  pharmacist: "Dispenses, verifies prescriptions and keeps the controlled-drugs register.",
+  technician: "Works on assigned jobs and work orders.",
+  instructor: "Handles classes, students and their records.",
+  front_desk: "Greets customers, books, checks in and takes payments.",
 }
 
 /** A cashier may give up to this discount without a manager's approval. */
@@ -72,4 +112,14 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "shift.manage": "Open and close own shift",
   "branches.all": "See all branches",
   "backup.manage": "Backups, restore and data export",
+  "deliveries.view": "See all deliveries",
+  "deliveries.manage": "Create and assign deliveries",
+  "deliveries.load": "Confirm what is loaded onto a vehicle",
+  "deliveries.fulfil": "Carry out their own deliveries",
+  "fleet.manage": "Manage vehicles",
+  "records.view": "See bookings, orders and jobs",
+  "records.manage": "Create and update bookings, orders and jobs",
+  "time.clock": "Clock in and out",
+  "hours.view": "See everyone's hours worked",
+  "hours.manage": "Correct hours worked",
 }

@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api/client"
 import { toSale } from "@/lib/api/mappers"
-import { refresh } from "@/lib/api/sync"
+import { injectQueuedSales, refresh } from "@/lib/api/sync"
 import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { isOffline, usePosStore } from "@/lib/stores/pos-store"
@@ -38,6 +38,9 @@ export interface CheckoutInput {
 }
 
 const round = (n: number) => Math.round(n * 100) / 100
+const shortKey = (key: string) => key.replace(/[^a-z0-9]/gi, "").slice(0, 6).toUpperCase()
+/** A POST that takes longer than this is treated as "no connection": the sale is kept and uploaded later (same key, so never twice). */
+const SALE_TIMEOUT_MS = 15_000
 
 /** On-screen estimate only. The server prices every sale from its own database when the sale is saved. */
 export function priceLines(lines: { product: Product; quantity: number }[], discountTotal: number) {
@@ -85,7 +88,7 @@ function provisionalSale(input: CheckoutInput): Sale {
   const now = new Date().toISOString()
   return {
     id: `offline-${input.idempotencyKey}`, businessId: user?.businessId ?? "", branchId: user?.branchId ?? "", customerId: input.customerId,
-    userId: user?.id ?? "", orderNumber: "Pending sync", receiptNumber: "Pending sync", idempotencyKey: input.idempotencyKey, status: "completed",
+    userId: user?.id ?? "", orderNumber: `OFFLINE-${shortKey(input.idempotencyKey)}`, receiptNumber: `OFFLINE-${shortKey(input.idempotencyKey)}`, idempotencyKey: input.idempotencyKey, status: "completed",
     subtotal, taxTotal, discountTotal, total, paidAmount: paid, changeAmount: input.cashTendered ? round(Math.max(0, input.cashTendered - cashPaid)) : 0,
     amountDue: paid < total ? round(total - paid) : undefined, paymentMethod: biggest ? biggest.method : "credit",
     approvedBy: input.approvedBy, synced: false,
@@ -98,10 +101,27 @@ function provisionalSale(input: CheckoutInput): Sale {
   }
 }
 
+/** Takes the sold units off the local stock count, so several offline sales cannot sell the same shelf twice. */
+function deductLocalStock(input: CheckoutInput) {
+  const data = useDataStore.getState()
+  const user = useAuthStore.getState().user
+  const here = user?.branchId ?? input.branchId ?? data.branches[0]?.id ?? ""
+  for (const line of input.lines) {
+    const live = data.products.find((p) => p.id === line.product.id)
+    if (!live) continue
+    const branchStock = { ...(live.branchStock ?? {}) }
+    if (here in branchStock) branchStock[here] = Math.max(0, branchStock[here] - line.quantity)
+    data.patch("products", live.id, { branchStock, stock: Math.max(0, (live.stock ?? 0) - line.quantity) })
+  }
+}
+
 function queueOffline(input: CheckoutInput): Sale {
   checkStockLocally(input)
   const sale = provisionalSale(input)
-  usePosStore.getState().enqueue({ idempotencyKey: input.idempotencyKey, occurredAt: sale.createdAt, payload: requestBody(input) })
+  const user = useAuthStore.getState().user
+  usePosStore.getState().enqueue({ idempotencyKey: input.idempotencyKey, occurredAt: sale.createdAt, payload: requestBody(input), userId: user?.id, sale, status: "pending" })
+  deductLocalStock(input)
+  useDataStore.getState().upsert("sales", sale, true)
   return sale
 }
 
@@ -122,7 +142,7 @@ export async function completeSale(input: CheckoutInput): Promise<Sale> {
   }
 
   try {
-    const sale = toSale(await api("/sales", { method: "POST", body: requestBody(input), idempotencyKey: input.idempotencyKey }))
+    const sale = toSale(await api("/sales", { method: "POST", body: requestBody(input), idempotencyKey: input.idempotencyKey, timeoutMs: SALE_TIMEOUT_MS }))
     useDataStore.getState().upsert("sales", sale, true)
     await Promise.allSettled([refresh.products(), input.customerId ? refresh.customer(input.customerId) : Promise.resolve()])
     notify.success(`Sale ${sale.receiptNumber} complete`, `KES ${sale.total.toLocaleString()}${sale.amountDue ? ` · KES ${sale.amountDue.toLocaleString()} on account` : ""}`)
@@ -147,27 +167,56 @@ export async function refundSale(saleId: string, kind: "refund" | "void", reason
 }
 
 let syncing = false
+const BATCH = 50
 
-/** Uploads sales queued while offline. Returns how many were saved. */
-export async function syncPendingSales(): Promise<number> {
-  const pos = usePosStore.getState()
-  if (syncing || pos.queue.length === 0 || isOffline()) return 0
+export interface SyncOutcome { saved: number; needsAttention: number; failedToReach: boolean }
+
+/**
+ * Uploads sales queued while offline, oldest first, in batches. Each one comes back as:
+ *  created / duplicate -> done, removed from the queue
+ *  rejected            -> kept and flagged "needs attention" (never silently dropped); a person can retry or discard it
+ *  retry / no answer   -> stays in line and is tried again later
+ */
+export async function syncPendingSales(): Promise<SyncOutcome> {
+  const none: SyncOutcome = { saved: 0, needsAttention: 0, failedToReach: false }
+  const me = useAuthStore.getState().user
+  const waiting = usePosStore.getState().queue
+    .filter((q) => (q.status ?? "pending") === "pending" && (!q.userId || q.userId === me?.id))
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+  if (syncing || waiting.length === 0 || isOffline()) return none
   syncing = true
+  const out: SyncOutcome = { ...none }
   try {
-    const res = await api<{ results: { idempotencyKey: string; status: string; error?: { message: string } }[] }>("/sales/sync", {
-      method: "POST",
-      body: { sales: pos.queue.map((q) => ({ ...q.payload, idempotencyKey: q.idempotencyKey, occurredAt: q.occurredAt })) },
-    })
-    const done = res.results.filter((r) => r.status === "created" || r.status === "duplicate").length
-    // Rejected sales (for example, stock ran out elsewhere) are dropped from the queue and reported, never retried forever.
-    const rejected = res.results.filter((r) => r.status !== "created" && r.status !== "duplicate")
-    usePosStore.getState().dequeue(res.results.map((r) => r.idempotencyKey))
-    await Promise.allSettled([refresh.sales(), refresh.products()])
-    if (done) notify.success("Back online", `${done} offline sale(s) synced`)
-    rejected.forEach((r) => notify.error("An offline sale was rejected", r.error?.message))
-    return done
-  } catch {
-    return 0
+    for (let i = 0; i < waiting.length; i += BATCH) {
+      const batch = waiting.slice(i, i + BATCH)
+      let res: { results: { idempotencyKey: string; status: string; error?: { code?: string; message: string } }[] }
+      try {
+        res = await api("/sales/sync", {
+          method: "POST", timeoutMs: 60_000,
+          body: { sales: batch.map((q) => ({ ...q.payload, idempotencyKey: q.idempotencyKey, occurredAt: q.occurredAt })) },
+        })
+      } catch (e) {
+        batch.forEach((q) => usePosStore.getState().markAttempt(q.idempotencyKey, { status: "pending" }))
+        if (e instanceof ApiError && e.status === 0) out.failedToReach = true
+        break
+      }
+      for (const r of res.results) {
+        if (r.status === "created" || r.status === "duplicate") {
+          out.saved += 1
+          usePosStore.getState().dequeue([r.idempotencyKey])
+        } else if (r.status === "rejected") {
+          out.needsAttention += 1
+          usePosStore.getState().markAttempt(r.idempotencyKey, { status: "needs_attention", error: r.error ?? { message: "The server did not accept this sale." } })
+        } else {
+          usePosStore.getState().markAttempt(r.idempotencyKey, { status: "pending", error: r.error })
+        }
+      }
+    }
+    if (out.saved || out.needsAttention) await Promise.allSettled([refresh.sales(), refresh.products()])
+    injectQueuedSales()
+    if (out.saved) notify.success("Back online", `${out.saved} offline sale(s) synced`)
+    if (out.needsAttention) notify.error("Some offline sales need attention", "Open the sync panel at the top to retry or review them.")
+    return out
   } finally {
     syncing = false
   }

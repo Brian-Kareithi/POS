@@ -1,11 +1,17 @@
 import { api } from "@/lib/api/client"
 import { refresh } from "@/lib/api/sync"
-import type { Role } from "@/lib/types"
+import type { IndustryConfig, Role } from "@/lib/types"
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/permissions"
 
 export type AssignableRole = Exclude<Role, "owner">
 
-/** Roles the server accepts when approving or adding staff. */
-export const ASSIGNABLE_ROLES: AssignableRole[] = ["cashier", "manager", "stockkeeper"]
+const CORE_ASSIGNABLE: AssignableRole[] = ["manager", "cashier", "stockkeeper"]
+
+/** Roles this business can give people: the core ones plus whatever its industry uses (riders for logistics, waiters for restaurants...). */
+export function assignableRoles(industry: IndustryConfig | null): { role: AssignableRole; label: string; description: string }[] {
+  const fromServer = industry?.roles.filter((r) => r.role !== "owner") as { role: AssignableRole; label: string; description: string }[] | undefined
+  return fromServer ?? CORE_ASSIGNABLE.map((role) => ({ role, label: ROLE_LABELS[role], description: ROLE_DESCRIPTIONS[role] }))
+}
 
 interface ApproveInput { role: AssignableRole; branchId?: string; salary?: number }
 

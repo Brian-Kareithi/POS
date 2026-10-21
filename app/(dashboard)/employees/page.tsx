@@ -7,7 +7,7 @@ import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { can, ROLE_DESCRIPTIONS, ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_LABELS, type Permission } from "@/lib/permissions"
 import { ApiError, errorMessage } from "@/lib/api/client"
-import { ASSIGNABLE_ROLES, staffApi, type AssignableRole } from "@/lib/api/staff"
+import { assignableRoles, staffApi, type AssignableRole } from "@/lib/api/staff"
 import { notify } from "@/lib/toast"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,7 @@ import type { Employee, Role } from "@/lib/types"
 import { Plus, UserCog, Users, Clock, Check, Minus, Copy, Link2 } from "lucide-react"
 
 const ROLE_ORDER: Role[] = ["owner", "manager", "cashier", "stockkeeper"]
-const roleVariant: Record<Role, "info" | "success" | "default" | "warning"> = { owner: "info", manager: "success", cashier: "default", stockkeeper: "warning" }
+const roleVariant = (r: Role): "info" | "success" | "default" | "warning" => (r === "owner" ? "info" : r === "manager" ? "success" : r === "stockkeeper" || r === "warehouse_clerk" ? "warning" : "default")
 type Tab = "pending" | "active" | "inactive"
 
 export default function EmployeesPage() {
@@ -35,7 +35,8 @@ export default function EmployeesPage() {
 function Staff() {
   const router = useRouter()
   const params = useSearchParams()
-  const { employees, users, branches, business, loaded, loadError } = useDataStore()
+  const { employees, users, branches, business, loaded, loadError, industry } = useDataStore()
+  const assignable = assignableRoles(industry)
   const me = useAuthStore((s) => s.user)
   const canManage = can(me?.role, "staff.manage")
 
@@ -169,9 +170,9 @@ function Staff() {
                               aria-label={`Role for ${user?.name}`}
                               className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm"
                             >
-                              {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                              {assignable.map((r) => <option key={r.role} value={r.role}>{r.label}</option>)}
                             </select>
-                          ) : <Badge variant={roleVariant[emp.role]}>{ROLE_LABELS[emp.role]}</Badge>}
+                          ) : <Badge variant={roleVariant(emp.role)}>{ROLE_LABELS[emp.role]}</Badge>}
                         </TableCell>
                         <TableCell>
                           {canManage && tab === "active" ? (
@@ -293,7 +294,7 @@ function ApproveDialog({ employee, name, onClose, onSubmit }: { employee: Employ
   return (
     <Dialog open onClose={onClose} title={`Approve ${name}`} size="md">
       <form onSubmit={submit} className="space-y-4">
-        <Select label="Role" options={ASSIGNABLE_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))} value={role} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setRole(e.target.value as AssignableRole)} autoFocus />
+        <Select label="Role" options={assignableRoles(useDataStore.getState().industry).map((r) => ({ value: r.role, label: r.label }))} value={role} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setRole(e.target.value as AssignableRole)} autoFocus />
         <p className="-mt-2 text-xs text-gray-500">{ROLE_DESCRIPTIONS[role]}</p>
         <BranchSelect value={branchId} onChange={setBranchId} />
         <Input label="Monthly salary (KES, optional)" type="number" min="0" step={100} value={salary} onChange={(e) => setSalary(e.target.value)} />
@@ -359,7 +360,7 @@ function AddDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (v: {
         <Input label="Email (used to sign in)" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <Input label="Phone (optional)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0712 345 678" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Role" options={ASSIGNABLE_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))} value={form.role} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, role: e.target.value as AssignableRole })} />
+          <Select label="Role" options={assignableRoles(useDataStore.getState().industry).map((r) => ({ value: r.role, label: r.label }))} value={form.role} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, role: e.target.value as AssignableRole })} />
           <BranchSelect value={form.branchId} onChange={(v) => setForm({ ...form, branchId: v })} />
         </div>
         <Input label="Monthly salary (KES, optional)" type="number" min="0" step={100} value={form.salary} onChange={(e) => setForm({ ...form, salary: e.target.value })} />

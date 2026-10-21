@@ -1,10 +1,12 @@
-import { api, listAll } from "@/lib/api/client"
+import { ApiError, api, listAll } from "@/lib/api/client"
 import { toAdjustment, toAudit, toBranch, toBusiness, toCustomer, toNotification, toProduct, toPurchaseOrder, toSale, toShift, toStaff, toSupplier, toTransaction, toTransfer, toWarehouse, clean } from "@/lib/api/mappers"
 import { useDataStore } from "@/lib/stores/data-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useReceiptSettings, type PaperSize } from "@/lib/stores/receipt-settings"
 import { can, type Permission } from "@/lib/permissions"
-import type { Category, Brand, Coupon, CustomerGroup, Promotion } from "@/lib/types"
+import { restoreSnapshot, saveSnapshot } from "@/lib/offline/snapshot"
+import { usePosStore } from "@/lib/stores/pos-store"
+import type { Category, Brand, Coupon, CustomerGroup, IndustryConfig, Promotion } from "@/lib/types"
 
 type Step = () => Promise<void>
 
@@ -16,10 +18,19 @@ export async function loadAllData(): Promise<void> {
   const has = (p: Permission) => can(user.role, p)
   const set = data.setCollection
   const errors: string[] = []
+  let unreachable = false
 
   // Stage 1: reference data the later stages need for name look-ups.
   const stage1: Step[] = [
-    async () => data.setBusiness(toBusiness(await api("/business"))),
+    async () => {
+      try {
+        data.setBusiness(toBusiness(await api("/business")))
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 0) unreachable = true
+        throw e
+      }
+    },
+    async () => data.setIndustry(await api<IndustryConfig>("/industry")),
     async () => set("branches", (await api<unknown[]>("/branches")).map(toBranch)),
     async () => {
       const s = await api<{ headerText: string; footerText: string; terms: string; kraPin: string; paper: PaperSize; autoPrint: boolean }>("/settings/receipts")
@@ -43,6 +54,16 @@ export async function loadAllData(): Promise<void> {
     })
   }
   await run(stage1, errors)
+
+  // No connection: start from the copy saved on this device so the till can still sell.
+  if (unreachable) {
+    const savedAt = await restoreSnapshot(user.id)
+    if (savedAt) {
+      injectQueuedSales()
+      data.setLoaded(true, null)
+      return
+    }
+  }
 
   const state = useDataStore.getState()
   const nameOf = (id: string) => state.users.find((u) => u.id === id)?.name ?? (id === user.id ? user.name : "Staff")
@@ -75,7 +96,20 @@ export async function loadAllData(): Promise<void> {
   if (has("shift.manage")) stage2.push(async () => set("shiftRecords", (await listAll<unknown>("/shifts", {}, 3)).map((r) => toShift(r, nameOf))))
   await run(stage2, errors)
 
+  injectQueuedSales()
+  data.setOfflineSnapshotAt(null)
   data.setLoaded(true, errors.length ? errors[0] : null)
+  if (errors.length === 0) void saveSnapshot(user.id)
+}
+
+/** Sales waiting to upload show in the sales list (marked as not yet synced) until the server has them. */
+export function injectQueuedSales() {
+  const me = useAuthStore.getState().user
+  const data = useDataStore.getState()
+  for (const q of usePosStore.getState().queue) {
+    if (q.userId && q.userId !== me?.id) continue
+    if (q.sale && !data.sales.some((s) => s.idempotencyKey === q.idempotencyKey)) data.upsert("sales", q.sale, true)
+  }
 }
 
 async function run(steps: Step[], errors: string[]) {

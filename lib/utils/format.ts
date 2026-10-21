@@ -30,3 +30,10 @@ export function formatPercentage(num: number): string {
     maximumFractionDigits: 1,
   }).format(num / 100)
 }
+
+/** 450 -> "7h 30m". */
+export function formatMinutes(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes))
+  const h = Math.floor(m / 60)
+  return h ? `${h}h ${String(m % 60).padStart(2, "0")}m` : `${m}m`
+}
