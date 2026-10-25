@@ -344,7 +344,7 @@ export function PosTerminal() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-20 md:pb-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {visibleItems.map((product) => {
               const quantity = inOrder(product.id)
               const stock = stockOf(product)
@@ -352,27 +352,27 @@ export function PosTerminal() {
               const days = daysToExpiry(product)
               const blocked = stock === 0 || expiry === "expired"
               return (
-                <article key={product.id} className={`overflow-hidden rounded-xl border bg-white p-2.5 shadow-sm ${quantity ? "border-[#14853b]" : "border-transparent"}`}>
-                  <div className="relative grid h-28 place-items-center overflow-hidden rounded-lg bg-pos-tile text-pos-muted sm:h-24 xl:h-[108px]">
+                <article key={product.id} className={`overflow-hidden rounded-xl border bg-white p-2 shadow-sm ${quantity ? "border-[#14853b]" : "border-transparent"}`}>
+                  <div className="relative grid h-20 place-items-center overflow-hidden rounded-lg bg-pos-tile text-pos-muted">
                     {product.image
                       ? <div role="img" aria-label={product.name} className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url("${product.image}")` }} />
                       : <ImageIcon size={28} />}
                     {expiry === "soon" && <span className="absolute left-0 top-2 rounded-r bg-[#f4ce35] px-2 py-1 text-[9px] font-bold text-[#332d0c]">Expires in {days}d</span>}
                     {expiry === "expired" && <span className="absolute left-0 top-2 rounded-r bg-[#c0392b] px-2 py-1 text-[9px] font-bold text-white">Expired</span>}
                   </div>
-                  <h2 className="mt-2 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">{product.name}</h2>
+                  <h2 className="mt-1.5 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">{product.name}</h2>
                   <div className="mt-1 flex items-center justify-between text-[10px]">
                     <span className="font-bold text-pos-green">{formatCurrency(product.sellingPrice)}</span>
                     <span className={stock === 0 ? "font-semibold text-pos-danger" : stock <= product.minStock ? "font-semibold text-pos-warn-text" : "text-pos-muted"}>{stock === 0 ? "Out of stock" : `${stock} in stock`}</span>
                   </div>
                   {quantity ? (
-                    <div className="mt-2 flex h-8 items-center justify-between rounded-md bg-pos-accent-soft px-2 text-xs">
+                    <div className="mt-1.5 flex h-7 items-center justify-between rounded-md bg-pos-accent-soft px-2 text-xs">
                       <button onClick={() => updateQuantity(product.id, -1)} aria-label={`Remove one ${product.name}`} className="grid h-6 w-6 place-items-center rounded-full text-pos-brand"><Minus size={14} /></button>
                       <span className="font-semibold">{quantity}</span>
                       <button onClick={() => addItem(product)} aria-label={`Add one ${product.name}`} className="grid h-6 w-6 place-items-center rounded-full bg-pos-brand text-white"><Plus size={14} /></button>
                     </div>
                   ) : (
-                    <button onClick={() => addItem(product)} disabled={blocked} className="mt-2 h-8 w-full rounded-md bg-pos-accent-soft text-[10px] font-semibold text-pos-green hover:bg-pos-accent-soft-hover disabled:cursor-not-allowed disabled:bg-pos-disabled-bg disabled:text-pos-muted">{expiry === "expired" ? "Expired" : stock === 0 ? "Out of stock" : "Add to order"}</button>
+                    <button onClick={() => addItem(product)} disabled={blocked} className="mt-1.5 h-7 w-full rounded-md bg-pos-accent-soft text-[10px] font-semibold text-pos-green hover:bg-pos-accent-soft-hover disabled:cursor-not-allowed disabled:bg-pos-disabled-bg disabled:text-pos-muted">{expiry === "expired" ? "Expired" : stock === 0 ? "Out of stock" : "Add to order"}</button>
                   )}
                 </article>
               )
