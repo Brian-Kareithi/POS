@@ -9,7 +9,12 @@ export function authFailure(e: unknown, fallback = "Something went wrong. Please
     case "ACCOUNT_PENDING": return { tone: "waiting", code: e.code, message: "Your account is waiting for the owner's approval. You'll be able to sign in once they approve it." }
     case "ACCOUNT_REJECTED": return { tone: "error", code: e.code, message: "Your request was declined. Contact the owner." }
     case "ACCOUNT_DISABLED": return { tone: "error", code: e.code, message: "Your account has been switched off. Contact the owner." }
-    case "INVALID_CREDENTIALS": return { tone: "error", code: e.code, message: "Incorrect email or password." }
+    case "ACCOUNT_NOT_FOUND": return { tone: "error", code: e.code, message: "No account exists with that email address. Check the spelling or create an account." }
+    case "INVALID_CREDENTIALS": return { tone: "error", code: e.code, message: "The password is wrong for this email address." }
+    case "ACCOUNT_LOCKED":
+    case "OFFLINE":
+    case "TIMEOUT":
+    case "SERVER_UNAVAILABLE": return { tone: "error", code: e.code, message: e.message }
     case "TOTP_REQUIRED": return { tone: "error", code: e.code, message: "Enter the 6-digit code from your authenticator app." }
     case "TOTP_INVALID": return { tone: "error", code: e.code, message: "That code isn't right. Check your authenticator app and try again." }
     case "BUSINESS_REQUIRED":
@@ -22,12 +27,11 @@ export function authFailure(e: unknown, fallback = "Something went wrong. Please
     case "REFRESH_REUSED":
     case "REFRESH_EXPIRED":
     case "REFRESH_INVALID": return { tone: "error", code: e.code, message: "Your session has ended. Please sign in again." }
-    case "NETWORK": return { tone: "error", code: e.code, message: "Cannot reach the server. Check your internet connection and try again." }
+    case "NETWORK": return { tone: "error", code: e.code, message: e.message }
     case "VALIDATION_ERROR": return { tone: "error", code: e.code, message: e.message }
     case "RATE_LIMITED": return { tone: "error", code: e.code, message: "Too many attempts. Please try again later." }
     default:
       if (e.status === 429) return { tone: "error", code: e.code, message: "Too many attempts. Please try again later." }
-      if (e.status === 0) return { tone: "error", code: e.code, message: "Cannot reach the server. Check your internet connection and try again." }
       return { tone: "error", code: e.code, message: e.message || fallback }
   }
 }

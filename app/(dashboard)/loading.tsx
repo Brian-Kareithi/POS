@@ -1,5 +1,8 @@
-import { DashboardSkeleton } from "@/components/ui/skeleton"
+"use client"
+
+import { usePathname } from "next/navigation"
+import { DashboardSkeleton, PosSkeleton } from "@/components/ui/skeleton"
 
 export default function DashboardLoading() {
-  return <DashboardSkeleton />
+  return usePathname() === "/" ? <PosSkeleton /> : <DashboardSkeleton />
 }

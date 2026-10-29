@@ -32,9 +32,10 @@ describe("login", () => {
   it.each([
     ["ACCOUNT_REJECTED", "Your request was declined. Contact the owner."],
     ["ACCOUNT_DISABLED", "Your account has been switched off. Contact the owner."],
-    ["INVALID_CREDENTIALS", "Incorrect email or password."],
+    ["INVALID_CREDENTIALS", "The password is wrong for this email address."],
+    ["ACCOUNT_NOT_FOUND", "No account exists with that email address."],
   ])("explains %s clearly", async (code, text) => {
-    mockApi({ "POST /auth/login": () => apiError(code === "INVALID_CREDENTIALS" ? 401 : 403, code) })
+    mockApi({ "POST /auth/login": () => apiError(code === "INVALID_CREDENTIALS" || code === "ACCOUNT_NOT_FOUND" ? 401 : 403, code) })
     await signIn()
     expect(await screen.findByRole("alert")).toHaveTextContent(text)
   })
@@ -61,7 +62,7 @@ describe("login", () => {
   it("validates the email before calling the server", async () => {
     const calls = mockApi({})
     await signIn("not-an-email")
-    expect(await screen.findByText("Enter a valid email address")).toBeInTheDocument()
+    expect(await screen.findByText("That doesn't look like an email address")).toBeInTheDocument()
     expect(calls).toHaveLength(0)
   })
 })

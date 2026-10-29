@@ -1,9 +1,10 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils/cn"
 import { useUIStore } from "@/lib/stores/ui-store"
 
-/** The shapes below follow the live design: rounded cards (rounded-2xl), pill buttons, a floating sidebar and top bar. */
+/** The shapes below follow the live design: rounded-xl cards, inputs and buttons, pill menu items, a floating sidebar and top bar. */
 
 export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
@@ -17,7 +18,7 @@ export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivEl
 
 export function SkeletonCard() {
   return (
-    <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6">
+    <div className="space-y-3 rounded-xl border border-gray-200 bg-white px-4 py-4 sm:px-6">
       <Skeleton className="h-4 w-24" />
       <Skeleton className="h-8 w-32" />
       <Skeleton className="h-3 w-20" />
@@ -25,17 +26,18 @@ export function SkeletonCard() {
   )
 }
 
-/** Stat cards in a 2x2 block (two across on every screen, four across on very wide ones). */
+/** Stat cards like the real ones: label, big number and change on the left, icon tile on the right. One across on phones, two from sm, three on xl. */
 export function StatGridSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 sm:p-5">
-          <Skeleton className="h-10 w-10 shrink-0 rounded-2xl sm:h-11 sm:w-11" />
+        <div key={i} className="flex items-start justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-4 sm:px-6">
           <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-6 w-12 sm:w-16" />
-            <Skeleton className="h-3 w-full max-w-24" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-3 w-40 max-w-full" />
           </div>
+          <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
         </div>
       ))}
     </div>
@@ -49,7 +51,7 @@ export function SkeletonTable({ rows = 5, cols = 4, bordered = true }: { rows?: 
     <div
       role="status"
       aria-label="Loading"
-      className={cn("divide-y divide-gray-100 bg-white", bordered && "overflow-hidden rounded-2xl border border-gray-200")}
+      className={cn("divide-y divide-gray-100 bg-white", bordered && "overflow-hidden rounded-xl border border-gray-200")}
     >
       <div className="flex gap-4 px-4 py-4 sm:px-6">
         {Array.from({ length: cols }).map((_, i) => (
@@ -70,7 +72,7 @@ export function SkeletonTable({ rows = 5, cols = 4, bordered = true }: { rows?: 
 /** A list of rows: a round avatar or icon, two lines of text, and a pill on the right. */
 export function ListSkeleton({ rows = 5, bordered = true, className }: { rows?: number; bordered?: boolean; className?: string }) {
   return (
-    <div role="status" aria-label="Loading" className={cn("divide-y divide-gray-100 bg-white", bordered && "overflow-hidden rounded-2xl border border-gray-200", className)}>
+    <div role="status" aria-label="Loading" className={cn("divide-y divide-gray-100 bg-white", bordered && "overflow-hidden rounded-xl border border-gray-200", className)}>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 px-4 py-4 sm:px-5">
           <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
@@ -88,26 +90,26 @@ export function ListSkeleton({ rows = 5, bordered = true, className }: { rows?: 
 /** Labelled fields stacked in a card, ending in a pill button: settings pages and forms. */
 export function FormSkeleton({ fields = 4 }: { fields?: number }) {
   return (
-    <div role="status" aria-label="Loading" className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6">
+    <div role="status" aria-label="Loading" className="space-y-4 rounded-xl border border-gray-200 bg-white px-4 py-4 sm:px-6">
       {Array.from({ length: fields }).map((_, i) => (
         <div key={i} className="space-y-2">
           <Skeleton className="h-3 w-24" />
           <Skeleton className="h-10 w-full" />
         </div>
       ))}
-      <Skeleton className="h-10 w-32 rounded-full" />
+      <Skeleton className="h-10 w-32" />
     </div>
   )
 }
 
 export function PageHeaderSkeleton({ action }: { action?: boolean }) {
   return (
-    <div className="mb-6 flex items-center justify-between gap-3">
+    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <Skeleton className="h-7 w-40 sm:h-8 sm:w-48" />
-        <Skeleton className="mt-2 h-4 w-56 max-w-full sm:w-72" />
+        <Skeleton className="h-7 w-44 sm:h-8 sm:w-56" />
+        <Skeleton className="mt-2 h-4 w-64 max-w-full sm:w-80" />
       </div>
-      {action && <Skeleton className="h-9 w-28 shrink-0 rounded-full" />}
+      {action && <Skeleton className="h-10 w-48 max-w-full shrink-0 rounded-lg" />}
     </div>
   )
 }
@@ -126,8 +128,8 @@ export function PageSkeleton({ rows = 6 }: { rows?: number }) {
 export function DetailSkeleton() {
   return (
     <div role="status" aria-label="Loading" className="space-y-4">
-      <Skeleton className="h-8 w-32 rounded-full" />
-      <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-5">
+      <Skeleton className="h-9 w-28" />
+      <div className="space-y-3 rounded-xl border border-gray-200 bg-white px-6 py-4">
         <Skeleton className="h-6 w-48" />
         <Skeleton className="h-4 w-64 max-w-full" />
         <Skeleton className="h-3 w-40" />
@@ -142,26 +144,86 @@ export function SkeletonLine({ width = "100%" }: { width?: string }) {
   return <Skeleton className="h-4" style={{ width }} />
 }
 
-function SkeletonPanel() {
+function SkeletonPanel({ height = "h-60" }: { height?: string }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <div className="border-b border-gray-100 px-4 py-4 sm:px-6">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="space-y-2 border-b border-gray-100 px-4 py-4 sm:px-6">
         <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-3 w-48 max-w-full" />
       </div>
-      <SkeletonTable rows={3} cols={4} bordered={false} />
+      <div className="px-4 py-4 sm:px-6"><Skeleton className={cn("w-full", height)} /></div>
     </div>
   )
 }
 
-/** Page-content placeholder: heading, stat cards, two panels. Mirrors the real dashboard pages. */
+/** Page-content placeholder, drawn like the overview: heading and period tabs, stat cards, a wide chart beside a smaller one, then two lists. */
 export function DashboardSkeleton() {
   return (
     <div role="status" aria-label="Loading" className="space-y-4 sm:space-y-6">
       <PageHeaderSkeleton action />
-      <StatGridSkeleton />
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
+      <StatGridSkeleton count={6} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2"><SkeletonPanel height="h-52 sm:h-72" /></div>
         <SkeletonPanel />
-        <SkeletonPanel />
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SkeletonPanel height="h-40" />
+        <SkeletonPanel height="h-40" />
+      </div>
+    </div>
+  )
+}
+
+/** The sale screen: search bar and buttons, category tiles, a grid of small product cards, and the Current Sale panel. */
+export function PosSkeleton() {
+  return (
+    <div role="status" aria-label="Loading" className="flex h-full min-h-0 gap-2 lg:gap-3">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-pos-canvas">
+        <div className="flex h-[54px] shrink-0 items-center gap-2 border-b border-pos-tile bg-white px-4">
+          <Skeleton className="h-9 max-w-[420px] flex-1 rounded-lg" />
+          <div className="ml-auto flex gap-2">
+            <Skeleton className="h-9 w-9 rounded-lg sm:w-20" />
+            <Skeleton className="h-9 w-9 rounded-lg sm:w-32" />
+          </div>
+        </div>
+        <div className="flex shrink-0 px-4 pt-3">
+          <Skeleton className="h-6 w-40 rounded-full" />
+        </div>
+        <div className="flex shrink-0 gap-2 overflow-hidden px-4 py-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex min-w-[82px] flex-col items-start gap-2 rounded-lg bg-white px-3 py-2">
+              <Skeleton className="h-6 w-6 rounded-md" />
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-2 w-8" />
+            </div>
+          ))}
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden px-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            {Array.from({ length: 18 }).map((_, i) => (
+              <div key={i} className="rounded-xl bg-white p-2 shadow-sm">
+                <Skeleton className="h-20 w-full rounded-lg" />
+                <Skeleton className="mt-1.5 h-3 w-4/5" />
+                <Skeleton className="mt-1 h-3 w-3/5" />
+                <div className="mt-1 flex items-center justify-between"><Skeleton className="h-3 w-12" /><Skeleton className="h-3 w-14" /></div>
+                <Skeleton className="mt-1.5 h-7 w-full rounded-md" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="hidden w-[min(340px,38vw)] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm md:flex">
+        <div className="flex h-[60px] shrink-0 items-center border-b border-pos-line px-4">
+          <div className="space-y-1.5"><Skeleton className="h-4 w-24" /><Skeleton className="h-2.5 w-32" /></div>
+        </div>
+        <div className="mx-4 mt-3 grid shrink-0 grid-cols-3 gap-1.5">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[52px] rounded-lg" />)}
+        </div>
+        <div className="flex-1 p-4"><Skeleton className="mx-auto mt-16 h-3 w-48" /></div>
+        <div className="shrink-0 space-y-3 border-t border-pos-line p-4">
+          <Skeleton className="h-[88px] rounded-lg" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+        </div>
       </div>
     </div>
   )
@@ -169,11 +231,12 @@ export function DashboardSkeleton() {
 
 /**
  * Full app-shell placeholder shown while the session loads, drawn like the real shell: a solid floating sidebar
- * (logo and name, menu pills, then the profile chip above Logout), a floating top bar (menu button, search, shift pill, theme, bell),
+ * (logo and name, menu pills, then the profile chip above Logout), a floating top bar (menu button, search, New Sale, theme, bell),
  * and a page. It follows the saved collapsed/expanded sidebar, and on a phone shows the hamburger and logo instead of the sidebar.
  */
 export function ShellSkeleton() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
+  const isPos = usePathname() === "/"
   return (
     <div className="flex h-dvh overflow-hidden bg-[#edf2f0] p-2 dark:bg-black lg:gap-3 lg:p-3">
       <div className={cn("hidden shrink-0 flex-col overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-black/5 lg:flex", collapsed ? "w-[4.75rem]" : "w-60")}>
@@ -195,19 +258,19 @@ export function ShellSkeleton() {
         </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2 lg:gap-3">
-        <div className="flex h-14 shrink-0 items-center gap-3 rounded-2xl bg-white px-3 shadow-sm ring-1 ring-black/5 sm:px-4 lg:px-5 lg:ring-0">
+        <div className="flex h-14 shrink-0 items-center gap-3 rounded-xl bg-white px-3 shadow-sm ring-1 ring-black/5 sm:px-4 lg:px-5 lg:ring-0">
           <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
           <Skeleton className="h-9 w-9 shrink-0 rounded-xl lg:hidden" />
-          <Skeleton className="hidden h-9 w-56 rounded-full md:block lg:w-80" />
-          <div className="ml-auto flex items-center gap-2">
-            <Skeleton className="h-9 w-9 rounded-full sm:w-28" />
-            <Skeleton className="hidden h-9 w-24 rounded-full sm:block" />
-            <Skeleton className="h-9 w-9 rounded-full" />
-            <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="hidden h-9 w-40 md:block lg:w-80" />
+          <Skeleton className="h-9 w-9 shrink-0 rounded-lg md:hidden" />
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            <Skeleton className="h-9 w-9 rounded-lg sm:w-28" />
+            <Skeleton className="h-9 w-9 rounded-lg" />
+            <Skeleton className="h-9 w-9 rounded-lg" />
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-hidden rounded-2xl p-2 sm:p-4 lg:p-6">
-          <DashboardSkeleton />
+        <div className={cn("min-h-0 flex-1 overflow-hidden", !isPos && "rounded-xl p-2 sm:p-4 lg:p-6")}>
+          {isPos ? <PosSkeleton /> : <DashboardSkeleton />}
         </div>
       </div>
     </div>
@@ -230,7 +293,7 @@ export function AuthSkeleton() {
         <div className="space-y-4">
           <div className="space-y-2"><Skeleton className="h-3 w-16" /><Skeleton className="h-11 w-full" /></div>
           <div className="space-y-2"><Skeleton className="h-3 w-20" /><Skeleton className="h-11 w-full" /></div>
-          <Skeleton className="h-12 w-full rounded-full" />
+          <Skeleton className="h-12 w-full" />
         </div>
       </div>
     </div>

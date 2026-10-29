@@ -13,6 +13,16 @@ export class ApiError extends Error {
   }
 }
 
+/** The browser hides why a fetch failed, so say what we do know: where we tried, and the usual causes once the device is online. */
+function unreachableMessage() {
+  const isLocal = (h: string) => /^(localhost|127\.0\.0\.1)/.test(h)
+  const host = new URL(API_URL).host
+  if (isLocal(host) && typeof location !== "undefined" && !isLocal(location.host)) {
+    return "This app is pointing at a local server because NEXT_PUBLIC_API_URL is not set. Set it to the API address and redeploy."
+  }
+  return `Could not connect to the server (${host}). It may be down, or it is not allowing this website to connect (CORS). Contact support if this continues.`
+}
+
 interface Tokens { accessToken: string | null; refreshToken: string | null }
 interface Bridge {
   get: () => Tokens
@@ -80,8 +90,16 @@ async function toError(res: Response): Promise<ApiError> {
   const e = payload?.error
   // The server already words validation problems as plain sentences ("Business name must be at least 2 characters").
   let message = e?.message ?? (res.status >= 500 ? "Something went wrong on the server. Please try again in a moment." : `Request failed (${res.status})`)
-  if (res.status === 413) message = "That file or request is too large."
-  return new ApiError(res.status, e?.code ?? "HTTP_ERROR", message, e?.details)
+  let code = e?.code ?? "HTTP_ERROR"
+  // A gateway answer with no JSON body comes from the host, not from the API: the service is down, starting up or redeploying.
+  if (!e && (res.status === 502 || res.status === 503 || res.status === 504)) {
+    code = "SERVER_UNAVAILABLE"
+    message = "The server is temporarily unavailable (it may be restarting). Please try again in a minute."
+  } else if (!e && res.status === 404) {
+    code = "NOT_FOUND"
+    message = "The server could not find what was requested. The app and the server may be out of sync."
+  } else if (res.status === 413) message = "That file or request is too large."
+  return new ApiError(res.status, code, message, e?.details)
 }
 
 async function request(path: string, opts: RequestOptions = {}): Promise<Response> {
@@ -89,8 +107,11 @@ async function request(path: string, opts: RequestOptions = {}): Promise<Respons
   let res: Response
   try {
     res = await send(path, opts, isForm)
-  } catch {
-    throw new ApiError(0, "NETWORK", "Cannot reach the server. Check your connection and try again.")
+  } catch (err) {
+    if (opts.signal?.aborted) throw err
+    if (err instanceof DOMException && err.name === "TimeoutError") throw new ApiError(0, "TIMEOUT", "The server took too long to respond. Please try again.")
+    if (typeof navigator !== "undefined" && navigator.onLine === false) throw new ApiError(0, "OFFLINE", "This device is offline. Connect to the internet and try again.")
+    throw new ApiError(0, "NETWORK", unreachableMessage())
   }
   if (res.status === 401 && !opts.public) {
     const code = (await res.clone().json().catch(() => null))?.error?.code as string | undefined

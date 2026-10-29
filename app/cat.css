@@ -1,0 +1,89 @@
+.cat, .sleeping-cat, .cat-peek {
+  --cat-fur: #f4efe8;
+  --cat-ear: #f2b8b8;
+  --cat-eye: #ffffff;
+  --cat-pupil: #1d2a22;
+  --cat-nose: #e58a95;
+  --cat-line: #4a4540;
+  --subtle: #859189;
+}
+.dark .cat, .dark .sleeping-cat, .dark .cat-peek {
+  --cat-fur: #d9d3ca;
+  --cat-ear: #c98f94;
+  --cat-line: #2c2824;
+}
+
+.cat { display: block; overflow: visible; }
+.cat .fur { fill: var(--cat-fur); }
+.cat .ear-in { fill: var(--cat-ear); }
+.cat .eye-w { fill: var(--cat-eye); transition: opacity 140ms; }
+.cat .pup { fill: var(--cat-pupil); }
+.cat .glint { fill: #fff; }
+.cat .nose { fill: var(--cat-nose); }
+.cat .mouth, .cat .whisk path, .cat .toe {
+  fill: none; stroke: var(--cat-line); stroke-width: 2; stroke-linecap: round;
+}
+.cat .toe { stroke-width: 1.6; opacity: .7; }
+.cat .lash, .cat .happy-mouth {
+  fill: none; stroke: var(--cat-line); stroke-width: 3; stroke-linecap: round; opacity: 0; transition: opacity 140ms;
+}
+.cat .lid { transform: scaleY(0); transition: transform 180ms cubic-bezier(.2,.8,.2,1); }
+.cat .pupil { transition: transform 110ms linear, opacity 140ms; }
+
+.cat.is-blink .lid { transform: scaleY(1); transition-duration: 70ms; }
+
+.cat.is-shy .lid { transform: scaleY(1); }
+.cat.is-shy .lash { opacity: 1; transition-delay: 120ms; }
+.cat.is-shy .eye-w { opacity: 0; transition-delay: 150ms; }
+.cat.is-shy.is-peek .cat-eye-r .eye-w { opacity: 1; transition-delay: 0ms; }
+.cat.is-shy.is-peek .cat-eye-r .lid { transform: scaleY(.5); }
+.cat.is-shy.is-peek .cat-eye-r .lash { opacity: 0; transition-delay: 0ms; }
+
+.cat-head { transform-origin: 100px 140px; transition: transform 420ms cubic-bezier(.34,1.56,.64,1); }
+.cat.is-shy .cat-head { transform: translateY(5px) rotate(-3deg); }
+.cat.is-shy.is-peek .cat-head { transform: translateY(2px) rotate(4deg); }
+
+.cat-ear { transition: transform 300ms cubic-bezier(.34,1.56,.64,1); }
+.cat-ear-l { transform-origin: 72px 58px; }
+.cat-ear-r { transform-origin: 128px 58px; }
+.cat.is-shy .cat-ear-l { transform: rotate(-16deg); }
+.cat.is-shy .cat-ear-r { transform: rotate(16deg); }
+.cat.is-twitch .cat-ear-r { animation: cat-twitch 420ms cubic-bezier(.2,.8,.2,1); }
+
+.cat.is-happy .eye-w, .cat.is-happy .pupil, .cat.is-happy .lid { opacity: 0; }
+.cat.is-happy .happy-mouth { opacity: 1; }
+.cat.is-happy .cat-head { animation: cat-bob 600ms cubic-bezier(.34,1.56,.64,1); }
+
+.cat.is-sad .cat-head { animation: cat-shake 520ms cubic-bezier(.2,.8,.2,1); }
+
+.cat-paws { transition: transform 420ms cubic-bezier(.34,1.56,.64,1); }
+
+.sleeping-cat { width: 150px; overflow: visible; }
+.sleeping-cat .fur { fill: var(--cat-fur); }
+.sleeping-cat .ear-in { fill: var(--cat-ear); }
+.sleeping-cat .line { fill: none; stroke: var(--cat-line); stroke-width: 2.4; stroke-linecap: round; }
+.sleeping-cat .tail { fill: none; stroke: var(--cat-fur); stroke-width: 11; stroke-linecap: round; }
+.sleeping-cat .body { transform-origin: 90px 86px; animation: cat-breathe 3.2s ease-in-out infinite; }
+.sleeping-cat .z { font: 800 13px var(--font-sans); fill: var(--subtle); opacity: 0; animation: cat-z 3.6s ease-in infinite; }
+.sleeping-cat .z2 { animation-delay: 1.2s; font-size: 16px; }
+.sleeping-cat .z3 { animation-delay: 2.4s; font-size: 11px; }
+
+.cat-peek { position: absolute; right: 28px; bottom: 100%; width: 96px; height: 76px; overflow: hidden; pointer-events: none; }
+.cat-peek .cat { width: 96px; transform: translateY(100%); transition: transform 520ms cubic-bezier(.34,1.56,.64,1); }
+.cat-peek.is-up .cat { transform: translateY(6%); }
+.cat-peek.is-half .cat { transform: translateY(48%); transition-duration: 700ms; }
+
+@keyframes cat-twitch { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-12deg); } 60% { transform: rotate(5deg); } }
+@keyframes cat-bob { 0% { transform: translateY(0); } 40% { transform: translateY(-8px) rotate(2deg); } 100% { transform: translateY(0); } }
+@keyframes cat-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-5px) rotate(-2deg); } 40% { transform: translateX(5px) rotate(2deg); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+@keyframes cat-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03, 1.05); } }
+@keyframes cat-z { 0% { opacity: 0; transform: translate(0, 0); } 20% { opacity: .9; } 100% { opacity: 0; transform: translate(10px, -22px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-head, .cat-ear, .lid, .pupil, .eye-w, .lash, .happy-mouth {
+    transition-duration: 1ms !important;
+  }
+  .cat.is-twitch .cat-ear-r, .cat.is-happy .cat-head, .cat.is-sad .cat-head, .sleeping-cat .body, .sleeping-cat .z {
+    animation: none !important;
+  }
+}

@@ -14,10 +14,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/auth/password-input"
 import { AuthAlert, AuthHeading } from "@/components/auth/auth-heading"
+import { Cat, type CatState } from "@/components/brand/cat"
 import { Mail, ShieldCheck } from "lucide-react"
 
 const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address"),
+  email: z.string().trim().min(1, "Enter your email address").email("That doesn't look like an email address"),
   password: z.string().min(1, "Enter your password"),
   totpCode: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code").optional().or(z.literal("")),
 })
@@ -29,6 +30,9 @@ export default function LoginPage() {
   const login = useAuthStore((s) => s.login)
   const [notice, setNotice] = useState<{ tone: Tone; message: string } | null>(null)
   const [needsCode, setNeedsCode] = useState(false)
+  const [passwordFocused, setPasswordFocused] = useState(false)
+  const [outcome, setOutcome] = useState<"happy" | "sad" | null>(null)
+  const catState: CatState = outcome ?? (passwordFocused ? "shy" : "idle")
   const signedIn = useAuthStore((s) => s.isAuthenticated && !!s.token)
 
   // Someone who already has a session has no business on the sign-in page.
@@ -40,12 +44,15 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setNotice(null)
+    setOutcome(null)
     try {
       await login(data.email, data.password, data.totpCode || undefined)
+      setOutcome("happy")
       notify.success("Welcome back", useAuthStore.getState().user?.name)
       router.push(landingFor(useAuthStore.getState().user?.role))
     } catch (e) {
       const failure = authFailure(e)
+      setOutcome(failure.tone === "error" && failure.code !== "TOTP_REQUIRED" ? "sad" : null)
       if (failure.code === "TOTP_REQUIRED") setNeedsCode(true)
       setNotice({ tone: failure.tone, message: failure.message })
       if (failure.tone === "error" && failure.code !== "TOTP_REQUIRED") notify.error("Could not sign in", failure.message)
@@ -55,6 +62,7 @@ export default function LoginPage() {
 
   return (
     <div>
+      <Cat state={catState} className="mx-auto -mt-2 mb-3 w-28" />
       <AuthHeading title="Welcome back" subtitle="Sign in to open your till, check your shop and keep things moving." />
 
       {notice && (
@@ -63,7 +71,9 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <Input label="Email" type="email" autoComplete="email" icon={<Mail className="h-4 w-4" />} placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
-        <PasswordInput label="Password" autoComplete="current-password" placeholder="Enter your password" error={errors.password?.message} {...register("password")} />
+        <div onFocus={() => { setPasswordFocused(true); setOutcome(null) }} onBlur={() => setPasswordFocused(false)}>
+          <PasswordInput label="Password" autoComplete="current-password" placeholder="Enter your password" error={errors.password?.message} {...register("password")} />
+        </div>
         {needsCode && (
           <Input label="Two-factor code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} icon={<ShieldCheck className="h-4 w-4" />} placeholder="123456" autoFocus error={errors.totpCode?.message} {...register("totpCode")} />
         )}

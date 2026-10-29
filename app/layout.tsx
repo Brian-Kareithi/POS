@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
+import "./cat.css"
 import { Providers } from "./providers"
 import { APP_NAME } from "@/lib/constants"
 
