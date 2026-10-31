@@ -5,6 +5,8 @@
   --cat-pupil: #1d2a22;
   --cat-nose: #e58a95;
   --cat-line: #4a4540;
+  --cat-tie: #07872f;
+  --cat-spark: #f2b705;
   --subtle: #859189;
 }
 .dark .cat, .dark .sleeping-cat, .dark .cat-peek {
@@ -87,3 +89,14 @@
     animation: none !important;
   }
 }
+
+/* the work-clothes bow tie sits on the chin, in the brand green */
+.cat .cat-bowtie path, .cat .cat-bowtie circle { fill: var(--cat-tie); stroke: var(--cat-line); stroke-width: 1.2; stroke-linejoin: round; }
+.cat .cat-bowtie circle { fill: #0a9a37; }
+
+/* sparkles only appear when the cat is pleased */
+.cat .cat-sparkles path { fill: var(--cat-spark); opacity: 0; transform-box: fill-box; transform-origin: center; }
+.cat.is-happy .cat-sparkles path { animation: cat-sparkle 1.6s ease-in-out infinite; }
+.cat.is-happy .cat-sparkles path:nth-child(2) { animation-delay: 500ms; }
+@keyframes cat-sparkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 40% { opacity: 1; transform: scale(1) rotate(20deg); } 70% { opacity: .8; transform: scale(.8) rotate(-10deg); } }
+@media (prefers-reduced-motion: reduce) { .cat.is-happy .cat-sparkles path { animation: none !important; opacity: 1; transform: none; } }

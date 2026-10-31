@@ -1,0 +1,204 @@
+/* The guest's tab page: a receipt printer that feeds the bill out of a slot, line by line. */
+
+.gt {
+  --gt-bg: #eaf1ec;
+  --gt-glow: rgba(7, 135, 47, 0.16);
+  --gt-body: #26302a;
+  --gt-body-hi: #38453d;
+  --gt-slot: #0b0f0d;
+  --gt-led-off: #3d4a42;
+  --gt-paper: #fffdf7;
+  --gt-paper-edge: #e7e1d0;
+  --gt-ink: #22281f;
+  --gt-ink-soft: #6c7468;
+  --gt-rule: #cfc8b3;
+  --gt-green: #07872f;
+  --gt-red: #b9382a;
+  min-height: 100dvh;
+  background:
+    radial-gradient(60rem 30rem at 50% -8rem, var(--gt-glow), transparent 70%),
+    var(--gt-bg);
+  color: var(--gt-ink);
+}
+.dark .gt {
+  --gt-bg: #0a0e0c;
+  --gt-glow: rgba(79, 209, 127, 0.14);
+  --gt-body: #1b231e;
+  --gt-body-hi: #28332c;
+  --gt-slot: #050706;
+  --gt-led-off: #2c3a31;
+  --gt-paper: #f6f2e6;
+  --gt-paper-edge: #d9d3bf;
+  --gt-green: #1a8f3f;
+}
+
+/* ---------- the printer ---------- */
+.gt-printer {
+  position: relative;
+  z-index: 2;
+  height: 46px;
+  border-radius: 20px 20px 14px 14px;
+  background: linear-gradient(180deg, var(--gt-body-hi), var(--gt-body));
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.gt-slot {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 9px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--gt-slot);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.gt-led {
+  position: absolute;
+  top: 13px;
+  right: 22px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gt-led-off);
+  transition: background 200ms, box-shadow 200ms;
+}
+.gt-led.is-on { background: #41e07a; box-shadow: 0 0 10px #41e07a; }
+.gt-led.is-busy { background: #f5b942; box-shadow: 0 0 10px #f5b942; animation: gt-blink 0.5s steps(2) infinite; }
+.gt-brand {
+  position: absolute;
+  top: 12px;
+  left: 22px;
+  font: 700 10px/1 var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* ---------- the paper ---------- */
+.gt-feed {
+  position: relative;
+  z-index: 1;
+  margin: -8px 14px 0;
+  overflow: hidden;
+  padding-bottom: 14px; /* room for the torn edge */
+}
+.gt-paper {
+  position: relative;
+  background: var(--gt-paper);
+  color: var(--gt-ink);
+  font-family: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 26px 20px 22px;
+  box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.45), inset 0 0 0 1px var(--gt-paper-edge);
+  transform-origin: top center;
+  animation: gt-feed 1100ms cubic-bezier(0.22, 0.7, 0.18, 1) both;
+}
+/* a torn, zig-zag bottom edge */
+.gt-paper::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+  height: 12px;
+  background:
+    linear-gradient(135deg, var(--gt-paper) 33.33%, transparent 33.33%) 0 0 / 14px 12px repeat-x,
+    linear-gradient(225deg, var(--gt-paper) 33.33%, transparent 33.33%) 0 0 / 14px 12px repeat-x;
+}
+.gt-paper.is-settled { animation: none; }
+
+.gt-center { text-align: center; }
+.gt-biz { font-size: 16px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.gt-soft { color: var(--gt-ink-soft); }
+.gt-rule { border: 0; border-top: 1.5px dashed var(--gt-rule); margin: 14px 0; }
+.gt-row { display: flex; justify-content: space-between; gap: 12px; }
+.gt-row > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.gt-row > :last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.gt-qty { color: var(--gt-ink-soft); font-size: 12px; }
+.gt-total { font-size: 18px; font-weight: 800; }
+
+/* each line is "printed": it is uncovered top to bottom */
+.gt-line {
+  animation: gt-print 380ms steps(7, end) backwards;
+}
+.gt-line.is-new { background: linear-gradient(90deg, rgba(7, 135, 47, 0.14), transparent 80%); animation: gt-print 380ms steps(7, end) backwards, gt-new 2.4s ease-out forwards; }
+.gt-flash { animation: gt-flash 700ms ease-out; }
+
+.gt-barcode {
+  height: 38px;
+  margin: 14px auto 0;
+  max-width: 220px;
+  background: repeating-linear-gradient(90deg, var(--gt-ink) 0 2px, transparent 2px 4px, var(--gt-ink) 4px 5px, transparent 5px 8px, var(--gt-ink) 8px 11px, transparent 11px 13px);
+  opacity: 0.8;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* ---------- the PAID stamp ---------- */
+.gt-stamp {
+  position: absolute;
+  top: 118px;
+  right: 14px;
+  padding: 4px 14px;
+  border: 3px solid var(--gt-red);
+  border-radius: 8px;
+  color: var(--gt-red);
+  font: 900 26px/1 var(--font-sans, system-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: rotate(-12deg) scale(2.4);
+  animation: gt-stamp 520ms cubic-bezier(0.2, 1.4, 0.4, 1) 700ms forwards;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+.dark .gt-stamp { mix-blend-mode: normal; }
+
+/* ---------- mascot perch ---------- */
+.gt-perch { position: relative; z-index: 3; display: flex; justify-content: center; margin-bottom: -7px; pointer-events: none; }
+.gt-perch .cat { width: 112px; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.18)); }
+
+/* ---------- status pills ---------- */
+.gt-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(7, 135, 47, 0.12);
+  color: var(--gt-green);
+}
+.dark .gt-pill { color: #4fd17f; background: rgba(79, 209, 127, 0.12); }
+.gt-pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: gt-pulse 1.6s ease-in-out infinite; }
+.gt-pill.is-warn { background: rgba(214, 140, 20, 0.14); color: #a8650a; }
+.dark .gt-pill.is-warn { color: #f5b869; }
+
+@keyframes gt-feed {
+  0% { transform: translateY(-100%); }
+  70% { transform: translateY(1.5%); }
+  100% { transform: translateY(0); }
+}
+@keyframes gt-print {
+  from { clip-path: inset(0 0 100% 0); transform: translateY(-4px); opacity: 0.2; }
+  to { clip-path: inset(0 0 0 0); transform: translateY(0); opacity: 1; }
+}
+@keyframes gt-new { from { background-color: rgba(7, 135, 47, 0.22); } to { background-color: transparent; } }
+@keyframes gt-flash { 0% { color: var(--gt-green); transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes gt-stamp { to { opacity: 0.92; transform: rotate(-12deg) scale(1); } }
+@keyframes gt-blink { 50% { opacity: 0.25; } }
+@keyframes gt-pulse { 50% { opacity: 0.3; transform: scale(0.7); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .gt-paper, .gt-line, .gt-line.is-new, .gt-flash, .gt-led.is-busy, .gt-pill i { animation: none !important; }
+  .gt-stamp { animation: none !important; opacity: 0.92; transform: rotate(-12deg); }
+}
+
+@media print {
+  .gt { background: #fff; }
+  .gt-printer, .gt-perch, .gt-actions, .no-print { display: none !important; }
+  .gt-feed { margin: 0; }
+  .gt-paper { box-shadow: none; animation: none; }
+  .gt-paper::after { display: none; }
+}

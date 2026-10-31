@@ -9,6 +9,8 @@ export type LookAtTarget = { x: number; y: number } | "pointer"
 export interface CatProps {
   state?: CatState
   lookAt?: LookAtTarget
+  /** A little bow tie: the house cat in its work clothes, used where it serves guests. */
+  bowtie?: boolean
   className?: string
   style?: React.CSSProperties
 }
@@ -46,7 +48,7 @@ function Eye({ side, cx, clipId, pupilRef }: { side: "l" | "r"; cx: number; clip
 }
 
 /** The mascot. Its eyes follow the pointer; `state` drives the shy / peeking / happy / sad poses. */
-export function Cat({ state = "idle", lookAt = "pointer", className, style }: CatProps) {
+export function Cat({ state = "idle", lookAt = "pointer", bowtie, className, style }: CatProps) {
   const uid = React.useId().replace(/:/g, "")
   const svgRef = React.useRef<SVGSVGElement>(null)
   const leftPupil = React.useRef<SVGGElement>(null)
@@ -153,9 +155,19 @@ export function Cat({ state = "idle", lookAt = "pointer", className, style }: Ca
         <Eye side="r" cx={124} clipId={`${uid}-r`} pupilRef={rightPupil} />
         <path className="nose" d="M94 104 Q100 102 106 104 L100 111 Z" />
         <path className="mouth" d="M100 111 Q100 118 92 118 M100 111 Q100 118 108 118" />
+        {bowtie && (
+          <g className="cat-bowtie">
+            <path d="M100 140 L84 132 L84 148 Z M100 140 L116 132 L116 148 Z" />
+            <circle cx={100} cy={140} r={4} />
+          </g>
+        )}
         <g className="whisk">
           <path d="M62 106 L28 99 M62 113 L28 116 M138 106 L172 99 M138 113 L172 116" />
         </g>
+      </g>
+      <g className="cat-sparkles">
+        <path d="M32 38 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" />
+        <path d="M168 30 l2.2 6 6 2.2 -6 2.2 -2.2 6 -2.2 -6 -6 -2.2 6 -2.2z" />
       </g>
       <g className="cat-paws">
         <ellipse className="fur" cx={66} cy={140} rx={18} ry={10} />

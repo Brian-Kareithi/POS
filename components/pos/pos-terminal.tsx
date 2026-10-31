@@ -8,6 +8,7 @@ import { usePosStore } from "@/lib/stores/pos-store"
 import { formatCurrency } from "@/lib/utils/format"
 import { generateId } from "@/lib/utils/generators"
 import { api, errorMessage } from "@/lib/api/client"
+import { refresh } from "@/lib/api/sync"
 import { expiryStatus, daysToExpiry, getBranchStock } from "@/lib/utils/stock"
 import { findProductByCode } from "@/lib/utils/barcode"
 import { computeDiscount } from "@/lib/utils/pricing"
@@ -23,11 +24,14 @@ import { ReceiptDialog } from "@/components/pos/receipt-dialog"
 import { CustomerPicker } from "@/components/pos/customer-picker"
 import { PromoCodeBox } from "@/components/pos/promo-code-box"
 import { DiscountDialog, noDiscount, type DiscountState } from "@/components/pos/discount-dialog"
+import { TabPickerDialog } from "@/components/tabs/tab-picker-dialog"
+import { TabShareDialog } from "@/components/tabs/tab-share-dialog"
+import { tabs as tabsApi, type Tab } from "@/lib/api/tabs"
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import type { Customer, Product, Sale } from "@/lib/types"
 import {
-  Clock, Grid2X2, ImageIcon, Minus, PackagePlus, Pause, Percent, Play, Plus, ScanLine, Search, Trash2, UserRound, WifiOff, X
+  Banknote, Clock, Grid2X2, ImageIcon, Minus, PackagePlus, Pause, Percent, Play, Plus, Receipt, ScanLine, Search, Trash2, UserRound, WifiOff, X
 } from "lucide-react"
 
 type OrderLine = { product: Product; quantity: number }
@@ -40,6 +44,7 @@ export function PosTerminal() {
   const promotions = useDataStore((state) => state.promotions)
   const shifts = useDataStore((state) => state.shiftRecords)
   const branches = useDataStore((state) => state.branches)
+  const industry = useDataStore((state) => state.industry)
   const { held, hold, resume, discardHeld, offlineMode, loadHeld } = usePosStore()
 
   const [activeCategory, setActiveCategory] = useState("all")
@@ -61,6 +66,9 @@ export function PosTerminal() {
   const [receipt, setReceipt] = useState<Sale | null>(null)
   const [orderOpen, setOrderOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [tabPickOpen, setTabPickOpen] = useState(false)
+  const [tabBusy, setTabBusy] = useState(false)
+  const [tabShare, setTabShare] = useState<Tab | null>(null)
   const [payError, setPayError] = useState("")
   const keyRef = useRef(generateId())
   const searchRef = useRef<HTMLInputElement>(null)
@@ -151,7 +159,7 @@ export function PosTerminal() {
     setLastScan(null)
   }
 
-  useScannerInput(handleCode, !scanOpen && !addOpen && !payOpen && !customerOpen && !discountOpen && !heldOpen && !receipt)
+  useScannerInput(handleCode, !scanOpen && !addOpen && !payOpen && !customerOpen && !discountOpen && !heldOpen && !tabPickOpen && !receipt)
 
   const updateQuantity = (id: string, change: number) => {
     setOrder((current) =>
@@ -197,6 +205,28 @@ export function PosTerminal() {
     }
   }
 
+  // Bars and restaurants: the order goes onto a table's tab instead of being paid for now.
+  const tabsOn = !!industry?.modules.includes("tabs") && can(user?.role, "pos.sell")
+  const sendToTab = async (choice: { tab: Tab } | { label: string }) => {
+    if (!order.length || tabBusy) return
+    setTabBusy(true)
+    const lines = order.map((l) => ({ productId: l.product.id, quantity: l.quantity }))
+    try {
+      const saved = "tab" in choice ? await tabsApi.add(choice.tab.id, lines) : await tabsApi.open({ label: choice.label, lines, customerId })
+      resetOrder()
+      setTabPickOpen(false)
+      setOrderOpen(false)
+      notify.success(`Added to ${saved.label}`, `${saved.itemCount} item(s) on the tab · ${formatCurrency(saved.total)}`)
+      // a brand-new tab gets its QR code straight away, so the guest can follow it from the first round
+      if (!("tab" in choice)) setTabShare(saved)
+      void refresh.products().catch(() => {})
+    } catch (error) {
+      notify.error("Could not add to the tab", errorMessage(error))
+    } finally {
+      setTabBusy(false)
+    }
+  }
+
   const resumeHeld = async (id: string) => {
     const h = held.find((x) => x.id === id)
     if (!h) return
@@ -208,6 +238,13 @@ export function PosTerminal() {
     setDiscount({ kind: h.discountKind, value: h.discountValue, coupon: h.couponCode, redeem: 0 })
     // A held sale's coupon is checked again when the sale is saved, so no stale rule is kept here.
     setHeldOpen(false)
+  }
+
+  // One tap for the most common sale: the customer hands over exactly the amount in cash.
+  const chargeExactCash = () => {
+    if (!order.length || busy) return
+    if (needsShift) return notify.warning("Open a shift to make sales", "You need an open shift before taking payments. Go to Shifts & Cash to open yours.")
+    void finishPayment({ payments: [{ method: "cash", amount: priced.total }] })
   }
 
   const openCharge = () => {
@@ -258,9 +295,10 @@ export function PosTerminal() {
     setWarning("")
     searchRef.current?.focus()
   }
-  const shortcuts = useRef({ openCharge, holdOrder, newSale })
+  const openTabPicker = () => { if (tabsOn && order.length) setTabPickOpen(true) }
+  const shortcuts = useRef({ openCharge, holdOrder, newSale, openTabPicker })
   useEffect(() => {
-    shortcuts.current = { openCharge, holdOrder, newSale }
+    shortcuts.current = { openCharge, holdOrder, newSale, openTabPicker }
   })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -268,6 +306,7 @@ export function PosTerminal() {
       if (e.key === "F2") { e.preventDefault(); searchRef.current?.focus() }
       if (e.key === "F4") { e.preventDefault(); shortcuts.current.openCharge() }
       if (e.key === "F6") { e.preventDefault(); shortcuts.current.holdOrder() }
+      if (e.key === "F7") { e.preventDefault(); shortcuts.current.openTabPicker() }
       if (e.key === "F8") { e.preventDefault(); setCustomerOpen(true) }
       if (e.key === "F9") { e.preventDefault(); setDiscountOpen(true) }
     }
@@ -287,7 +326,10 @@ export function PosTerminal() {
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" || !search.trim()) return
-                if (findProductByCode(products, search)) { handleCode(search); setSearch("") }
+                if (findProductByCode(products, search)) { handleCode(search); setSearch(""); return }
+                // not a barcode: Enter takes the top match, so a sale can be rung up without touching the mouse
+                const top = visibleItems[0]
+                if (top && addItem(top)) { setNotice(`Added ${top.name}`); setSearch("") }
               }}
               placeholder="Search or scan a barcode (F2)"
               className="min-w-0 flex-1 bg-transparent text-xs text-pos-text outline-none placeholder:text-pos-muted"
@@ -309,7 +351,7 @@ export function PosTerminal() {
           )}
           {branchName && branches.length > 1 && <span className="rounded-full bg-white px-3 py-1 font-medium text-pos-sub">Selling at {branchName}</span>}
           {offlineMode && <span className="flex items-center gap-1.5 rounded-full bg-pos-warn-bg px-3 py-1 font-medium text-pos-warn-text"><WifiOff size={13} />Offline - sales are saved on this device</span>}
-          <span className="ml-auto hidden text-pos-muted xl:block">Ctrl+Q new sale · F2 search · F4 charge · F6 hold · F8 customer · F9 discount</span>
+          <span className="ml-auto hidden text-pos-muted xl:block">Ctrl+Q new sale · F2 search · F4 charge · F6 hold{tabsOn ? " · F7 tab" : ""} · F8 customer · F9 discount</span>
         </div>
 
         {/* Only the unknown-barcode warning stays on the page, because it has a button; every other warning is a toast. */}
@@ -396,9 +438,10 @@ export function PosTerminal() {
           </div>
         </header>
 
-        <div className="mx-4 mt-3 grid shrink-0 grid-cols-3 gap-1.5 text-[10px] font-medium">
+        <div className={`mx-4 mt-3 grid shrink-0 gap-1.5 text-[10px] font-medium ${tabsOn ? "grid-cols-4" : "grid-cols-3"}`}>
           <button onClick={() => setCustomerOpen(true)} className="flex flex-col items-center gap-1 rounded-lg border border-pos-line py-2 text-pos-sub hover:bg-pos-hover"><UserRound size={15} /><span className="max-w-full truncate px-1">{customer ? customer.name.split(" ")[0] : "Customer"}</span></button>
           <button onClick={() => setDiscountOpen(true)} className={`flex flex-col items-center gap-1 rounded-lg border py-2 hover:bg-pos-hover ${disc.total > 0 ? "border-pos-accent-line bg-pos-accent text-pos-green" : "border-pos-line text-pos-sub"}`}><Percent size={15} />Discount</button>
+          {tabsOn && <button onClick={openTabPicker} disabled={!order.length} title="Put this order on a table's tab (F7)" className="flex flex-col items-center gap-1 rounded-lg border border-pos-accent-line bg-pos-accent py-2 text-pos-green hover:bg-pos-accent-soft-hover disabled:cursor-not-allowed disabled:border-pos-line disabled:bg-transparent disabled:text-pos-muted"><Receipt size={15} />Tab</button>}
           <button onClick={() => (order.length ? holdOrder() : setHeldOpen(true))} className="relative flex flex-col items-center gap-1 rounded-lg border border-pos-line py-2 text-pos-sub hover:bg-pos-hover">
             {order.length ? <Pause size={15} /> : <Play size={15} />}{order.length ? "Hold" : "Held"}
             {held.length > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-pos-brand px-1 text-[9px] text-white">{held.length}</span>}
@@ -429,6 +472,9 @@ export function PosTerminal() {
           </div>
           {notice && <p role="status" className="mt-2 text-[10px] font-medium text-pos-green">{notice}</p>}
           <button onClick={openCharge} disabled={!order.length} className="mt-3 h-11 w-full rounded-lg bg-pos-brand text-sm font-semibold text-white hover:bg-pos-brand-hover disabled:cursor-not-allowed disabled:bg-pos-disabled-btn">Charge {formatCurrency(priced.total)} <span className="ml-1 text-[10px] font-normal opacity-80">F4</span></button>
+          {order.length > 0 && !needsShift && (
+            <button onClick={chargeExactCash} disabled={busy} className="mt-1.5 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-pos-accent-line text-xs font-semibold text-pos-green hover:bg-pos-accent disabled:opacity-50"><Banknote size={14} />Exact cash, done</button>
+          )}
         </div>
       </aside>
 
@@ -443,6 +489,8 @@ export function PosTerminal() {
       <DiscountDialog open={discountOpen} subtotal={subtotal} customer={customer} current={discount} onClose={() => setDiscountOpen(false)} onApply={(state) => { setDiscount(state); setDiscountOpen(false) }} />
       <PaymentDialog open={payOpen} total={priced.total} customer={customer} busy={busy} branchId={here || undefined} onClose={() => setPayOpen(false)} onComplete={finishPayment} />
       <ReceiptDialog sale={receipt} onClose={() => setReceipt(null)} />
+      <TabPickerDialog open={tabPickOpen} busy={tabBusy} summary={`${itemCount} item${itemCount === 1 ? "" : "s"} · ${formatCurrency(priced.total)} will be added`} onClose={() => setTabPickOpen(false)} onChoose={(c) => void sendToTab(c)} />
+      <TabShareDialog tab={tabShare} onClose={() => setTabShare(null)} onChanged={setTabShare} />
       <Dialog open={heldOpen} onClose={() => setHeldOpen(false)} title="Held sales" size="md">
         <div className="space-y-2">
           {held.length === 0 && <p className="py-6 text-center text-sm text-gray-500">No sales on hold.</p>}

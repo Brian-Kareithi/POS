@@ -44,6 +44,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### For every business
 - **The till** (`/`): search or scan, hold and resume sales, discounts and promo codes, split payments (cash, M-Pesa, card, bank, credit), receipts you can print or share, keyboard shortcuts (`F2` search, `F4` charge, `F6` hold, `F8` customer, `F9` discount). A sale needs an open shift; if there isn't one you get a toast that says so.
+- **Open tabs** (bars and restaurants, `/tabs`): press **New tab** (or **Tab** / `F7` on the till to put the current order on a table), keep adding rounds as people order, and settle when they are ready. Each tab has a **Guest QR**: scanning it opens `/t/<token>` on the guest's phone, a read-only bill that prints out like a receipt, updates live as items are added, and ends with the total at the bottom. The guest can pay it with M-Pesa, or the owner/cashier can settle it at the till; either way it becomes a normal sale and the page turns into a stamped receipt. Taking items off an older tab needs a manager's PIN.
+- **Faster sales:** Enter in the search box adds the top match, **Exact cash, done** completes a sale in one tap, cash payments have one-tap amount buttons (Exact, next round figures) and Enter finishes a fully paid sale.
 - **Partial refunds:** on a sale, tap Refund and choose which items, and how many units of each, are coming back. Only those units return to stock, only that share is refunded, and the sale shows what was kept. A sale can be refunded in several steps; once any part has been refunded it can no longer be voided. Anyone allowed to refund can do it, and a cashier still needs a manager's PIN.
 - **Offline selling:** sales rung up without internet are saved on the device and uploaded, oldest first, when the connection returns. Each sale is reported as created, duplicate, rejected or retry; none is silently dropped.
 - **Owners and hours:** owners never clock in, so they have no clock button and are left out of the Hours worked report (they can still see everyone else's hours). Selling still needs an open shift for everyone, owners included.
@@ -106,6 +108,7 @@ app/
 │   ├── settings/       Business (with logo), features, taxes, receipts, payments, backups...
 │   └── ...             sales, products, inventory, customers, employees, deliveries, fleet, work, reports
 ├── (admin)/admin/      The super admin portal: overview, businesses, activity, my account
+├── t/[token]/          Guest tab page (public, read-only bill with a pay button)
 ├── terms/              Terms and conditions
 ├── self-checkout/      Customer self-checkout flow
 └── checkout/           QR payment page
@@ -113,6 +116,7 @@ components/
 ├── auth/               Industry picker, terms checkbox, liquid background, password input
 ├── brand/              PlatformLogo, BusinessLogo
 ├── layout/             SidebarFrame, sidebar, top bar, shift shortcut, clock widget, connection status
+├── tabs/               Tab picker and guest QR dialogs
 ├── pos/                Till, payment, receipt, discount, customer, scanner and stock dialogs
 └── ui/                 Buttons, inputs, tables, dialogs, skeletons, toaster
 lib/

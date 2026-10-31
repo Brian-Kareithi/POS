@@ -495,7 +495,7 @@ export interface Promotion {
 
 export type ModuleId =
   | "dashboard" | "pos" | "products" | "inventory" | "sales" | "promotions" | "customers" | "insights" | "shifts"
-  | "staff" | "hours" | "accounting" | "reports" | "audit" | "settings" | "deliveries" | "fleet"
+  | "staff" | "hours" | "accounting" | "reports" | "audit" | "settings" | "deliveries" | "fleet" | "tabs"
 
 export type FieldKind = "text" | "textarea" | "number" | "money" | "date" | "datetime" | "select" | "phone" | "boolean"
 export interface FieldDef { key: string; label: string; kind: FieldKind; required?: boolean; options?: string[]; placeholder?: string }

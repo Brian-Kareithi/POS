@@ -29,6 +29,13 @@ const methods: { id: Method; label: string; icon: React.ReactNode }[] = [
 ]
 const label = (m: PaymentMethod) => (m === "mobile_money" ? "M-Pesa" : m === "bank_transfer" ? "Bank transfer" : m === "card" ? "Card" : m === "credit" ? "On account" : "Cash")
 
+/** The notes a customer is most likely to hand over for this amount: exact, the next round figures, and the big notes above it. */
+function quickNotes(amount: number): number[] {
+  const exact = Math.ceil(amount)
+  const roundUp = (step: number) => Math.ceil(amount / step) * step
+  return [exact, roundUp(50), roundUp(100), roundUp(500), roundUp(1000)].filter((v, i, a) => v >= amount && a.indexOf(v) === i).slice(0, 5)
+}
+
 export function PaymentDialog(props: Props) {
   return props.open ? <PaymentForm {...props} /> : null
 }
@@ -119,6 +126,13 @@ function PaymentForm({ total, customer, busy, branchId, onClose, onComplete }: P
     push({ method, amount: target, reference: reference.trim() || undefined })
   }
 
+  // Cash in one tap: record the payment for what is still owed with the amount handed over, ready to complete.
+  const quickCash = (handed: number) => {
+    if (remaining <= 0 || target <= 0) return
+    setCashTendered((c) => c + handed)
+    push({ method: "cash", amount: target })
+  }
+
   const simulate = async (success: boolean) => {
     if (stk.state !== "pending") return
     try {
@@ -132,6 +146,17 @@ function PaymentForm({ total, customer, busy, branchId, onClose, onComplete }: P
     if (busy) return
     onComplete({ payments, cashTendered: cashTendered || undefined })
   }
+
+  // Once the bill is covered, Enter finishes the sale (unless a button or field has focus and wants the key itself).
+  useEffect(() => {
+    if (remaining > 0 || busy) return
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null
+      if (e.key === "Enter" && !(el && (el.tagName === "BUTTON" || el.tagName === "INPUT" || el.tagName === "TEXTAREA"))) { e.preventDefault(); finish() }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  })
 
   return (
     <Dialog open onClose={busy ? () => {} : onClose} title="Take payment" size="md">
@@ -183,10 +208,11 @@ function PaymentForm({ total, customer, busy, branchId, onClose, onComplete }: P
                 <button onClick={() => setShare(0.5)} className="rounded-full border border-gray-200 px-3 py-1 hover:bg-gray-50">Half {formatCurrency(Math.round(remaining * 50) / 100)}</button>
               </div>
             )}
-            {method === "cash" && receivedNum > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {[Math.ceil(target), 500, 1000, 2000].filter((v, i, a) => v >= target && a.indexOf(v) === i).map((v) => (
-                  <button key={v} onClick={() => setReceived(String(v))} className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:bg-gray-50">{formatCurrency(v)}</button>
+            {method === "cash" && target > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-gray-500">Tap what they handed over:</span>
+                {quickNotes(target).map((v) => (
+                  <button key={v} onClick={() => quickCash(v)} className={`rounded-full border px-3 py-1 text-xs font-medium ${v === Math.ceil(target) ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 hover:bg-gray-50"}`}>{v === Math.ceil(target) ? "Exact" : formatCurrency(v)}</button>
                 ))}
               </div>
             )}
@@ -231,7 +257,7 @@ function PaymentForm({ total, customer, busy, branchId, onClose, onComplete }: P
         <div className="flex gap-2">
           <Button variant="secondary" onClick={onClose} disabled={busy}>Back</Button>
           {remaining === 0 ? (
-            <Button className="flex-1" size="lg" onClick={finish} isLoading={busy}>Complete sale</Button>
+            <Button className="flex-1" size="lg" onClick={finish} isLoading={busy} autoFocus>Complete sale <span className="text-xs font-normal opacity-80">Enter</span></Button>
           ) : (
             <Button className="flex-1" size="lg" disabled={!canUseAccount || stk.state === "pending" || stk.state === "sending" || busy} onClick={finish} isLoading={busy}>
               Put {formatCurrency(remaining)} on account

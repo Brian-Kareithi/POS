@@ -2,7 +2,7 @@ import type { IndustryConfig, ModuleId, Role, Terms } from "@/lib/types"
 import { can, type Permission } from "@/lib/permissions"
 import {
   LayoutDashboard, Store, Package, Warehouse, ShoppingCart, Users, UserCog, BookOpen, BarChart3,
-  Settings, Clock, ShieldCheck, Sparkles, Tag, Truck, Bike, Car, Timer, ClipboardList,
+  Settings, Clock, ShieldCheck, Sparkles, Tag, Truck, Bike, Car, Timer, ClipboardList, Receipt,
 } from "lucide-react"
 
 export interface NavItem {
@@ -31,6 +31,7 @@ export function allNavItems(config: IndustryConfig | null): NavItem[] {
   return [
     { href: "/overview", label: "Dashboard", icon: LayoutDashboard, permission: anyOf("dashboard.view"), module: "dashboard" },
     { href: "/", label: t.pos, icon: Store, permission: anyOf("pos.sell"), module: "pos" },
+    { href: "/tabs", label: "Open tabs", icon: Receipt, permission: anyOf("pos.sell"), module: "tabs" },
     { href: "/deliveries", label: "Deliveries", icon: Truck, permission: anyOf("deliveries.view", "deliveries.manage", "deliveries.fulfil"), module: "deliveries" },
     { href: "/fleet", label: "Fleet", icon: Car, permission: anyOf("fleet.manage", "deliveries.manage", "deliveries.view"), module: "fleet" },
     ...records,
@@ -89,6 +90,7 @@ const ROUTE_RULES: RouteRule[] = [
   { prefix: "/inventory", permission: ["products.view"], module: "inventory" },
   { prefix: "/products", permission: ["products.view"], module: "products" },
   { prefix: "/categories", permission: ["products.view"], module: "products" },
+  { prefix: "/tabs", permission: ["pos.sell"], module: "tabs" },
   { prefix: "/deliveries", permission: ["deliveries.view", "deliveries.manage", "deliveries.fulfil"], module: "deliveries" },
   { prefix: "/fleet", permission: ["fleet.manage", "deliveries.manage", "deliveries.view"], module: "fleet" },
 ]
